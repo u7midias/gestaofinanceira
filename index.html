@@ -1344,10 +1344,40 @@ function salvarConta() {
   renderContas();
 }
 
-function marcarContaPaga(id) {
+async function marcarContaPaga(id) {
   const contas = loadContas();
   const c = contas.find(x=>x.id===id);
-  if (c) { c.pago = !c.pago; saveContas(contas); renderContas(); showToast(c.pago?'Marcada como paga!':'Marcada como pendente'); }
+  if (!c) return;
+
+  const pagandoAgora = !c.pago;
+  c.pago = pagandoAgora;
+  saveContas(contas);
+
+  if (pagandoAgora && c.valor > 0) {
+    // Lança automaticamente como saída
+    const saida = {
+      id:   uid(),
+      desc: c.desc + (c.obs ? ' — ' + c.obs : ''),
+      valor: c.valor,
+      dia:  c.dia || new Date().getDate(),
+      mes:  c.mes,
+      ano:  c.ano,
+      cat:  c.cat || 'Despesas Gerais',
+      obs:  'Lançado automaticamente via Contas a Pagar'
+    };
+    try {
+      await apiInsertSaida(saida);
+      DB.saidas.push(saida);
+      showToast('Pago! Lançado nas saídas ✓');
+    } catch(e) {
+      showToast('Pago! (erro ao lançar saída: ' + e.message + ')', true);
+    }
+    render();
+  } else {
+    showToast(pagandoAgora ? 'Marcada como paga!' : 'Marcada como pendente');
+  }
+
+  renderContas();
 }
 
 function deletarConta(id) {
