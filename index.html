@@ -223,7 +223,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
       <!-- Seletor de ano -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:13px;font-weight:600;color:var(--muted)">Ano</div>
-        <select id="dash-ano-select" onchange="setDashAnoSelect(this.value)" style="font-size:14px;font-weight:500;color:var(--text);border:1px solid var(--gray2);border-radius:8px;padding:5px 8px;background:var(--white);cursor:pointer;font-family:'DM Sans',sans-serif;width:90px">
+        <select id="dash-ano-select" style="font-size:14px;font-weight:500;color:var(--text);border:1px solid var(--gray2);border-radius:8px;padding:5px 8px;background:var(--white);cursor:pointer;font-family:'DM Sans',sans-serif;width:90px">
           <option>2024</option><option>2025</option><option selected>2026</option>
           <option>2027</option><option>2028</option><option>2029</option>
           <option>2030</option><option>2031</option><option>2032</option>
@@ -329,8 +329,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     <!-- LANÇAR -->
     <div id="lancar" class="screen">
       <div class="seg">
-        <button class="seg-btn active" id="s-ent" onclick="setSeg('ent')">Entrada</button>
-        <button class="seg-btn" id="s-sai" onclick="setSeg('sai')">Saída</button>
+        <button class="seg-btn active" id="s-ent" >Entrada</button>
+        <button class="seg-btn" id="s-sai" >Saída</button>
       </div>
 
       <div id="f-ent">
@@ -580,14 +580,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 
       <!-- Modo: Anual / Mensal -->
       <div class="seg" style="margin-bottom:12px">
-        <button class="seg-btn active" id="rel-modo-anual" onclick="setRelModo('anual')">Anual</button>
-        <button class="seg-btn" id="rel-modo-mensal" onclick="setRelModo('mensal')">Por Mês</button>
+        <button class="seg-btn active" id="rel-modo-anual" >Anual</button>
+        <button class="seg-btn" id="rel-modo-mensal" >Por Mês</button>
       </div>
 
       <!-- Seletores -->
       <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">
         <div style="font-size:13px;font-weight:600;color:var(--muted)">Ano</div>
-        <select id="rel-ano-select" onchange="setRelAno(this.value)" style="font-size:14px;font-weight:500;color:var(--text);border:1px solid var(--gray2);border-radius:8px;padding:5px 8px;background:var(--white);cursor:pointer;font-family:'DM Sans',sans-serif;width:90px">
+        <select id="rel-ano-select" style="font-size:14px;font-weight:500;color:var(--text);border:1px solid var(--gray2);border-radius:8px;padding:5px 8px;background:var(--white);cursor:pointer;font-family:'DM Sans',sans-serif;width:90px">
           <option>2024</option><option>2025</option><option selected>2026</option>
           <option>2027</option><option>2028</option><option>2029</option>
           <option>2030</option><option>2031</option><option>2032</option>
@@ -595,7 +595,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
         </select>
         <div id="rel-mes-wrap" style="display:none;align-items:center;gap:8px;flex:1">
           <div style="font-size:13px;font-weight:600;color:var(--muted)">Mês</div>
-          <select id="rel-mes-select" onchange="setRelMes(this.value)" style="font-size:14px;font-weight:500;color:var(--text);border:1px solid var(--gray2);border-radius:8px;padding:5px 8px;background:var(--white);cursor:pointer;font-family:'DM Sans',sans-serif;flex:1">
+          <select id="rel-mes-select" style="font-size:14px;font-weight:500;color:var(--text);border:1px solid var(--gray2);border-radius:8px;padding:5px 8px;background:var(--white);cursor:pointer;font-family:'DM Sans',sans-serif;flex:1">
             <option value="1">Janeiro</option><option value="2">Fevereiro</option>
             <option value="3">Março</option><option value="4">Abril</option>
             <option value="5">Maio</option><option value="6">Junho</option>
@@ -1755,3 +1755,29 @@ function renderRelatorio() {
   }).filter(Boolean);
   document.getElementById('rel-comparativo').innerHTML=compRows.length?compRows.join(''):'<div class="empty">Sem dados</div>';
 }
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+document.getElementById('ent-mes').value = CUR_MES;
+document.getElementById('sai-mes').value = CUR_MES;
+document.getElementById('ent-ano').value = CUR_ANO;
+document.getElementById('sai-ano').value = CUR_ANO;
+
+// Event listeners for selects (avoids inline onchange issues)
+(function() {
+  const el = id => document.getElementById(id);
+  const on = (id, ev, fn) => { const e = el(id); if(e) e.addEventListener(ev, fn); };
+
+  on('dash-ano-select', 'change', function(){ setDashAnoSelect(this.value); });
+  on('rel-ano-select',  'change', function(){ setRelAno(this.value); });
+  on('rel-mes-select',  'change', function(){ setRelMes(this.value); });
+  on('rel-modo-anual',  'click',  function(){ setRelModo('anual'); });
+  on('rel-modo-mensal', 'click',  function(){ setRelModo('mensal'); });
+  on('s-ent', 'click', function(){ setSeg('ent'); });
+  on('s-sai', 'click', function(){ setSeg('sai'); });
+
+  loadDB();
+})();
+
+</script>
+</body>
+</html>
