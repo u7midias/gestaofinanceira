@@ -870,8 +870,6 @@ function render() {
 
   document.getElementById('notif-count').textContent = entradas.filter(e=>e.status==='Pendente').length;
 
-  const anosDisp = [...new Set([...entradas.map(e=>e.ano),...saidas.map(s=>s.ano)])].sort();
-  if (!anosDisp.includes(dashAno)) dashAno = anosDisp[anosDisp.length-1] || CUR_ANO;
   const dashAnoSel = document.getElementById('dash-ano-select');
   if (dashAnoSel) dashAnoSel.value = dashAno;
   const btnAno = document.getElementById('btn-ano-label');
