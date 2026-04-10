@@ -794,11 +794,13 @@ function renderValores() {
 async function loadDB() {
   showLoading(true);
   try {
+    console.log('Conectando ao Supabase...');
     const [entradas, saidas, equipe] = await Promise.all([
       sb('entradas?order=ano.asc,mes.asc,dia.asc'),
       sb('saidas?order=ano.asc,mes.asc,dia.asc'),
       sb('equipe?order=criado_em.asc')
     ]);
+    console.log('Dados recebidos:', entradas?.length, 'entradas,', saidas?.length, 'saidas,', equipe?.length, 'equipe');
 
     DB.entradas = (entradas||[]).map(e => ({
       id: e.id, cliente: e.cliente, valor: parseFloat(e.valor)||0,
