@@ -678,6 +678,13 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 <div class="toast-wrap"><div class="toast" id="toast"></div></div>
 
 <script>
+// Safe global dispatcher — prevents "not defined" on early HTML events
+function setDashAnoSelect(v){ if(typeof dashAno!=='undefined'){ dashAno=parseInt(v); detMes=null; render(); } }
+function setRelAno(v){ if(typeof relAno!=='undefined'){ relAno=parseInt(v); renderRelatorio(); } }
+function setRelMes(v){ if(typeof relMes!=='undefined'){ relMes=parseInt(v); renderRelatorio(); } }
+function setRelModo(m){ if(typeof relModo!=='undefined'){ relModo=m; document.getElementById('rel-modo-anual').classList.toggle('active',m==='anual'); document.getElementById('rel-modo-mensal').classList.toggle('active',m==='mensal'); const mw=document.getElementById('rel-mes-wrap'); if(mw) mw.style.display=m==='mensal'?'flex':'none'; renderRelatorio(); } }
+function setSeg(t){ const fe=document.getElementById('f-ent'),fs=document.getElementById('f-sai'); if(fe&&fs){ fe.style.display=t==='ent'?'block':'none'; fs.style.display=t==='sai'?'block':'none'; document.getElementById('s-ent').classList.toggle('active',t==='ent'); document.getElementById('s-sai').classList.toggle('active',t==='sai'); } }
+
 const SB_URL = "https://fotssarkgylorfahkwaa.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvdHNzYXJrZ3lsb3JmYWhrd2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NjIwMjIsImV4cCI6MjA5MTMzODAyMn0.Gel8RLs8Wqr6LX6A9zvJtP0MMgrvQtgbfsvKQDmHJco";
 
@@ -1022,15 +1029,8 @@ function goTo(id, btn) {
   btn.classList.add('active');
   if (id === 'relatorio') { relAno = relAno||CUR_ANO; renderRelatorio(); } else { render(); if(id==='alertas') loadContas(); }
 }
-function setSeg(t) {
-  document.getElementById('f-ent').style.display = t==='ent' ? 'block' : 'none';
-  document.getElementById('f-sai').style.display = t==='sai' ? 'block' : 'none';
-  document.getElementById('s-ent').classList.toggle('active', t==='ent');
-  document.getElementById('s-sai').classList.toggle('active', t==='sai');
-}
-function setDashAnoSelect(val) {
-  dashAno = parseInt(val); detMes = null; render();
-}
+// setSeg defined at top
+// setDashAnoSelect defined at top
 function mudaAno(dir) {
   const anos = [...new Set([...DB.entradas.map(e=>e.ano),...DB.saidas.map(s=>s.ano)])].sort();
   const idx  = anos.indexOf(dashAno) + dir;
@@ -1600,16 +1600,9 @@ let relAno  = CUR_ANO;
 let relMes  = CUR_MES;
 let relModo = 'anual'; // 'anual' | 'mensal'
 
-function setRelAno(val)  { relAno  = parseInt(val);  renderRelatorio(); }
-function setRelMes(val)  { relMes  = parseInt(val);  renderRelatorio(); }
-function setRelModo(modo) {
-  relModo = modo;
-  document.getElementById('rel-modo-anual').classList.toggle('active',  modo==='anual');
-  document.getElementById('rel-modo-mensal').classList.toggle('active', modo==='mensal');
-  const mw = document.getElementById('rel-mes-wrap');
-  if (mw) mw.style.display = modo==='mensal' ? 'flex' : 'none';
-  renderRelatorio();
-}
+// setRelAno defined at top
+// setRelMes defined at top
+// setRelModo defined at top
 
 function renderRelatorio() {
   const {entradas, saidas} = DB;
