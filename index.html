@@ -1775,7 +1775,20 @@ document.getElementById('sai-ano').value = CUR_ANO;
   on('s-ent', 'click', function(){ setSeg('ent'); });
   on('s-sai', 'click', function(){ setSeg('sai'); });
 
-  loadDB();
+  // DEBUG — mostra resultado na tela
+  fetch('https://fotssarkgylorfahkwaa.supabase.co/rest/v1/entradas?limit=2', {
+    headers: {
+      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvdHNzYXJrZ3lsb3JmYWhrd2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NjIwMjIsImV4cCI6MjA5MTMzODAyMn0.Gel8RLs8Wqr6LX6A9zvJtP0MMgrvQtgbfsvKQDmHJco',
+      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvdHNzYXJrZ3lsb3JmYWhrd2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NjIwMjIsImV4cCI6MjA5MTMzODAyMn0.Gel8RLs8Wqr6LX6A9zvJtP0MMgrvQtgbfsvKQDmHJco'
+    }
+  }).then(r => r.json()).then(d => {
+    console.log('✅ SUPABASE OK — registros:', d.length, d);
+    showToast('Supabase OK: ' + d.length + ' registros');
+    loadDB();
+  }).catch(e => {
+    console.error('❌ SUPABASE ERRO:', e);
+    showToast('Erro Supabase: ' + e.message, true);
+  });
 })();
 
 </script>
