@@ -66,6 +66,8 @@ body{font-family:'DM Sans',sans-serif;background:#EFEFEF;display:flex;justify-co
 .kpi-lbl{font-size:12px;color:var(--muted);margin-bottom:5px}
 .kpi-val{font-size:20px;font-weight:600;font-family:'Oswald',sans-serif;color:var(--text)}
 .kpi-val.g{color:var(--brand-dark)}.kpi-val.red{color:var(--red)}
+.f-btn{background:var(--white);border:1px solid var(--gray2);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;color:var(--muted);font-family:'DM Sans',sans-serif;flex-shrink:0}
+.f-ativo{background:var(--grafite);color:#fff;border-color:var(--grafite)}
 .kpi-trend{font-size:12px;margin-top:3px;color:var(--muted)}
 .kpi-trend.up{color:var(--brand-dark)}
 
@@ -297,11 +299,31 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
       <div class="sec">Fluxo mês a mês</div>
       <div class="card" id="fluxo-bars"></div>
 
+      <!-- Busca -->
+      <div style="position:relative;margin-bottom:10px">
+        <input type="text" id="fluxo-busca" placeholder="Buscar cliente ou descrição..." oninput="renderBusca()" style="width:100%;padding:10px 14px 10px 36px;font-size:13px;border:1px solid var(--gray2);border-radius:10px;background:var(--white)">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px">⌕</span>
+      </div>
+      <!-- Filtro categoria -->
+      <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;scrollbar-width:none" id="fluxo-filtros">
+        <button onclick="setFiltro('')" id="f-todos" class="f-btn f-ativo">Todos</button>
+        <button onclick="setFiltro('Pessoal / Colaboradores')" id="f-pessoal" class="f-btn">Pessoal</button>
+        <button onclick="setFiltro('Marketing / Investimento')" id="f-mkt" class="f-btn">Mkt</button>
+        <button onclick="setFiltro('Impostos / Taxas')" id="f-imp" class="f-btn">Impostos</button>
+        <button onclick="setFiltro('Despesas Gerais')" id="f-ger" class="f-btn">Gerais</button>
+      </div>
+
       <div class="sec">Entradas recentes</div>
       <div class="card" id="list-entradas"></div>
 
       <div class="sec">Saídas recentes</div>
       <div class="card" id="list-saidas"></div>
+
+      <!-- Resultado da busca -->
+      <div id="busca-result" style="display:none">
+        <div class="sec">Resultados</div>
+        <div class="card" id="busca-list"></div>
+      </div>
     </div>
 
     <!-- LANÇAR -->
@@ -526,9 +548,19 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
               <option>Outros</option>
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-lbl">Observação</label>
-            <input type="text" id="conta-obs" placeholder="Opcional">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-lbl">Recorrência</label>
+              <select id="conta-recorrente">
+                <option value="nao">Não repete</option>
+                <option value="mensal">Todo mês</option>
+                <option value="anual">Todo ano</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-lbl">Observação</label>
+              <input type="text" id="conta-obs" placeholder="Opcional">
+            </div>
           </div>
           <div style="display:flex;gap:8px">
             <button onclick="toggleFormConta()" style="flex:1;padding:11px;border:1.5px solid var(--gray2);border-radius:10px;background:none;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Cancelar</button>
@@ -546,8 +578,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     <!-- RELATÓRIO -->
     <div id="relatorio" class="screen">
 
-      <!-- Seletor de ano -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <!-- Modo: Anual / Mensal -->
+      <div class="seg" style="margin-bottom:12px">
+        <button class="seg-btn active" id="rel-modo-anual" onclick="setRelModo('anual')">Anual</button>
+        <button class="seg-btn" id="rel-modo-mensal" onclick="setRelModo('mensal')">Por Mês</button>
+      </div>
+
+      <!-- Seletores -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">
         <div style="font-size:13px;font-weight:600;color:var(--muted)">Ano</div>
         <select id="rel-ano-select" onchange="setRelAno(this.value)" style="font-size:14px;font-weight:500;color:var(--text);border:1px solid var(--gray2);border-radius:8px;padding:5px 8px;background:var(--white);cursor:pointer;font-family:'DM Sans',sans-serif;width:90px">
           <option>2024</option><option>2025</option><option selected>2026</option>
@@ -555,6 +593,17 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
           <option>2030</option><option>2031</option><option>2032</option>
           <option>2033</option><option>2034</option><option>2035</option>
         </select>
+        <div id="rel-mes-wrap" style="display:none;align-items:center;gap:8px;flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--muted)">Mês</div>
+          <select id="rel-mes-select" onchange="setRelMes(this.value)" style="font-size:14px;font-weight:500;color:var(--text);border:1px solid var(--gray2);border-radius:8px;padding:5px 8px;background:var(--white);cursor:pointer;font-family:'DM Sans',sans-serif;flex:1">
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+            <option value="3">Março</option><option value="4">Abril</option>
+            <option value="5">Maio</option><option value="6">Junho</option>
+            <option value="7">Julho</option><option value="8">Agosto</option>
+            <option value="9">Setembro</option><option value="10">Outubro</option>
+            <option value="11">Novembro</option><option value="12">Dezembro</option>
+          </select>
+        </div>
       </div>
 
       <!-- KPIs do ano -->
@@ -775,6 +824,7 @@ async function loadDB() {
   }
   showLoading(false);
   render();
+  await loadContas();
 }
 
 // ── CRUD ───────────────────────────────────────────────────────────────────
@@ -968,7 +1018,7 @@ function goTo(id, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
-  if (id === 'relatorio') { relAno = relAno||CUR_ANO; renderRelatorio(); } else { render(); if(id==='alertas') renderContas(); }
+  if (id === 'relatorio') { relAno = relAno||CUR_ANO; renderRelatorio(); } else { render(); if(id==='alertas') loadContas(); }
 }
 function setSeg(t) {
   document.getElementById('f-ent').style.display = t==='ent' ? 'block' : 'none';
@@ -1302,12 +1352,35 @@ function exportarDados() {
 
 
 // ── CONTAS A PAGAR ─────────────────────────────────────────────────────────
-// Uses localStorage for contas (no extra Supabase table needed)
-function loadContas() {
-  return JSON.parse(localStorage.getItem('pj_contas') || '[]');
+let CONTAS = []; // in-memory, synced with Supabase
+
+async function loadContas() {
+  try {
+    const data = await sb('contas?order=ano.asc,mes.asc,dia.asc');
+    CONTAS = (data||[]).map(c=>({
+      id: c.id, desc: c.descricao, valor: parseFloat(c.valor)||0,
+      dia: c.dia||0, mes: c.mes, ano: c.ano,
+      cat: c.categoria||'Outros', obs: c.obs||'',
+      pago: c.pago||false, criado: c.criado_em
+    }));
+  } catch(e) {
+    // fallback to localStorage if table doesn't exist yet
+    CONTAS = JSON.parse(localStorage.getItem('pj_contas') || '[]');
+  }
+  renderContas();
 }
-function saveContas(contas) {
-  localStorage.setItem('pj_contas', JSON.stringify(contas));
+async function apiInsertConta(c) {
+  return sb('contas', 'POST', {
+    id: c.id, descricao: c.desc, valor: c.valor,
+    dia: c.dia, mes: c.mes, ano: c.ano,
+    categoria: c.cat, obs: c.obs, pago: c.pago
+  });
+}
+async function apiUpdateConta(id, fields) {
+  return sb('contas?id=eq.'+encodeURIComponent(id), 'PATCH', fields);
+}
+async function apiDeleteConta(id) {
+  return sb('contas?id=eq.'+encodeURIComponent(id), 'DELETE');
 }
 
 function toggleFormConta() {
@@ -1320,12 +1393,11 @@ function toggleFormConta() {
   }
 }
 
-function salvarConta() {
+async function salvarConta() {
   const desc  = document.getElementById('conta-desc').value.trim();
   const valor = parseFloat(document.getElementById('conta-valor').value);
   if (!desc) { showToast('Informe a descrição', true); return; }
-  const contas = loadContas();
-  contas.push({
+  const conta = {
     id:    uid(),
     desc,
     valor: valor || 0,
@@ -1335,60 +1407,78 @@ function salvarConta() {
     cat:   document.getElementById('conta-cat').value,
     obs:   document.getElementById('conta-obs').value.trim(),
     pago:  false,
-    criado: Date.now()
-  });
-  saveContas(contas);
-  ['conta-desc','conta-valor','conta-dia','conta-obs'].forEach(id => document.getElementById(id).value = '');
-  toggleFormConta();
-  showToast('Conta salva!');
-  renderContas();
+    recorrente: document.getElementById('conta-recorrente').value
+  };
+  try {
+    await apiInsertConta(conta);
+    CONTAS.push(conta);
+    // if monthly recurrence, create next months
+    if (conta.recorrente === 'mensal') {
+      for (let i=1; i<=11; i++) {
+        let m = conta.mes + i; let a = conta.ano;
+        if (m > 12) { m -= 12; a++; }
+        if (a > 2035) break;
+        const next = {...conta, id: uid(), mes: m, ano: a};
+        await apiInsertConta(next);
+        CONTAS.push(next);
+      }
+    } else if (conta.recorrente === 'anual') {
+      for (let i=1; i<=5; i++) {
+        const next = {...conta, id: uid(), ano: conta.ano+i};
+        if (next.ano > 2035) break;
+        await apiInsertConta(next);
+        CONTAS.push(next);
+      }
+    }
+    ['conta-desc','conta-valor','conta-dia','conta-obs'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('conta-recorrente').value = 'nao';
+    toggleFormConta();
+    showToast('Conta salva!');
+    renderContas();
+  } catch(e) {
+    showToast('Erro ao salvar: '+e.message, true);
+  }
 }
 
 async function marcarContaPaga(id) {
-  const contas = loadContas();
-  const c = contas.find(x=>x.id===id);
+  const c = CONTAS.find(x=>x.id===id);
   if (!c) return;
-
   const pagandoAgora = !c.pago;
-  c.pago = pagandoAgora;
-  saveContas(contas);
-
-  if (pagandoAgora && c.valor > 0) {
-    // Lança automaticamente como saída
-    const saida = {
-      id:   uid(),
-      desc: c.desc + (c.obs ? ' — ' + c.obs : ''),
-      valor: c.valor,
-      dia:  c.dia || new Date().getDate(),
-      mes:  c.mes,
-      ano:  c.ano,
-      cat:  c.cat || 'Despesas Gerais',
-      obs:  'Lançado automaticamente via Contas a Pagar'
-    };
-    try {
+  try {
+    await apiUpdateConta(id, { pago: pagandoAgora });
+    c.pago = pagandoAgora;
+    if (pagandoAgora && c.valor > 0) {
+      const saida = {
+        id: uid(),
+        desc: c.desc + (c.obs ? ' — ' + c.obs : ''),
+        valor: c.valor,
+        dia:  c.dia || new Date().getDate(),
+        mes:  c.mes, ano: c.ano,
+        cat:  c.cat || 'Despesas Gerais',
+        obs:  'Via Contas a Pagar'
+      };
       await apiInsertSaida(saida);
       DB.saidas.push(saida);
       showToast('Pago! Lançado nas saídas ✓');
-    } catch(e) {
-      showToast('Pago! (erro ao lançar saída: ' + e.message + ')', true);
+      render();
+    } else {
+      showToast(pagandoAgora ? 'Marcada como paga!' : 'Marcada como pendente');
     }
-    render();
-  } else {
-    showToast(pagandoAgora ? 'Marcada como paga!' : 'Marcada como pendente');
-  }
-
+  } catch(e) { showToast('Erro: '+e.message, true); }
   renderContas();
 }
 
-function deletarConta(id) {
-  const contas = loadContas().filter(c=>c.id!==id);
-  saveContas(contas);
-  renderContas();
-  showToast('Conta removida');
+async function deletarConta(id) {
+  try {
+    await apiDeleteConta(id);
+    CONTAS = CONTAS.filter(c=>c.id!==id);
+    renderContas();
+    showToast('Conta removida');
+  } catch(e) { showToast('Erro: '+e.message, true); }
 }
 
 function renderContas() {
-  const contas = loadContas().sort((a,b)=>{
+  const contas = [...CONTAS].sort((a,b)=>{
     if (a.pago !== b.pago) return a.pago ? 1 : -1; // pendentes primeiro
     return (a.ano*10000 + a.mes*100 + a.dia) - (b.ano*10000 + b.mes*100 + b.dia);
   });
@@ -1446,21 +1536,98 @@ function renderContas() {
   document.getElementById('notif-count').textContent = pendEntradas + atrasadas;
 }
 
-// ── RELATÓRIO ──────────────────────────────────────────────────────────────
-let relAno = CUR_ANO;
 
-function setRelAno(val) { relAno = parseInt(val); renderRelatorio(); }
+// ── BUSCA / FILTRO ─────────────────────────────────────────────────────────
+let filtroAtivo = '';
+
+function setFiltro(cat) {
+  filtroAtivo = cat;
+  document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('f-ativo'));
+  const map = {'':'f-todos','Pessoal / Colaboradores':'f-pessoal','Marketing / Investimento':'f-mkt','Impostos / Taxas':'f-imp','Despesas Gerais':'f-ger'};
+  const el = document.getElementById(map[cat]);
+  if (el) el.classList.add('f-ativo');
+  renderBusca();
+}
+
+function renderBusca() {
+  const q = (document.getElementById('fluxo-busca')?.value||'').toLowerCase().trim();
+  const resultWrap = document.getElementById('busca-result');
+  const buscaList  = document.getElementById('busca-list');
+  if (!resultWrap || !buscaList) return;
+
+  const temFiltro = q || filtroAtivo;
+  resultWrap.style.display = temFiltro ? 'block' : 'none';
+
+  if (!temFiltro) return;
+
+  let entsFilt = DB.entradas.filter(e => !q || e.cliente.toLowerCase().includes(q));
+  let saisFilt = DB.saidas.filter(s => {
+    const matchQ   = !q || s.desc.toLowerCase().includes(q);
+    const matchCat = !filtroAtivo || s.cat === filtroAtivo;
+    return matchQ && matchCat;
+  });
+
+  if (!q && filtroAtivo) entsFilt = []; // category filter only applies to saidas
+
+  const totalE = entsFilt.reduce((a,b)=>a+b.valor,0);
+  const totalS = saisFilt.reduce((a,b)=>a+b.valor,0);
+
+  let html2 = '';
+  if (entsFilt.length > 0) {
+    html2 += `<div style="padding:8px 14px;font-size:11px;font-weight:600;color:var(--muted);background:var(--gray)">ENTRADAS (${entsFilt.length}) — ${mv(totalE,fmtK(totalE))}</div>`;
+    html2 += entsFilt.slice(0,10).map(e=>`
+      <div class="list-row">
+        <div style="flex:1;min-width:0"><div class="list-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.cliente}</div><div class="list-sub">${MESES_S[e.mes-1]} ${e.ano} · dia ${e.dia}</div></div>
+        <div class="list-right"><div class="amt-pos">+${mv(e.valor,fmt(e.valor))}</div><span class="badge ${e.status==='Pago'?'bg':'by'}">${e.status}</span></div>
+      </div>`).join('');
+  }
+  if (saisFilt.length > 0) {
+    html2 += `<div style="padding:8px 14px;font-size:11px;font-weight:600;color:var(--muted);background:var(--gray)">SAÍDAS (${saisFilt.length}) — ${mv(totalS,fmtK(totalS))}</div>`;
+    html2 += saisFilt.slice(0,10).map(s=>`
+      <div class="list-row">
+        <div style="flex:1;min-width:0"><div class="list-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.desc}</div><div class="list-sub">${MESES_S[s.mes-1]} ${s.ano} · ${s.cat.split(' / ')[0]}</div></div>
+        <div class="list-right"><div class="amt-neg">-${mv(s.valor,fmt(s.valor))}</div></div>
+      </div>`).join('');
+  }
+  if (!html2) html2 = '<div class="empty">Nenhum resultado encontrado</div>';
+  buscaList.innerHTML = html2;
+}
+
+// ── RELATÓRIO ──────────────────────────────────────────────────────────────
+let relAno  = CUR_ANO;
+let relMes  = CUR_MES;
+let relModo = 'anual'; // 'anual' | 'mensal'
+
+function setRelAno(val)  { relAno  = parseInt(val);  renderRelatorio(); }
+function setRelMes(val)  { relMes  = parseInt(val);  renderRelatorio(); }
+function setRelModo(modo) {
+  relModo = modo;
+  document.getElementById('rel-modo-anual').classList.toggle('active',  modo==='anual');
+  document.getElementById('rel-modo-mensal').classList.toggle('active', modo==='mensal');
+  const mw = document.getElementById('rel-mes-wrap');
+  if (mw) mw.style.display = modo==='mensal' ? 'flex' : 'none';
+  renderRelatorio();
+}
 
 function renderRelatorio() {
   const {entradas, saidas} = DB;
-  const eAno = entradas.filter(e=>e.ano==relAno);
-  const sAno = saidas.filter(s=>s.ano==relAno);
+  const sel = document.getElementById('rel-ano-select');
+  if (sel) sel.value = relAno;
+  const selM = document.getElementById('rel-mes-select');
+  if (selM) selM.value = relMes;
+
+  // Filter by ano OR ano+mes depending on mode
+  const eAno = relModo==='anual'
+    ? entradas.filter(e=>e.ano==relAno)
+    : entradas.filter(e=>e.ano==relAno&&e.mes==relMes);
+  const sAno = relModo==='anual'
+    ? saidas.filter(s=>s.ano==relAno)
+    : saidas.filter(s=>s.ano==relAno&&s.mes==relMes);
+
   const rec  = eAno.reduce((a,b)=>a+b.valor,0);
   const sai  = sAno.reduce((a,b)=>a+b.valor,0);
   const luc  = rec - sai;
   const marg = rec>0?(luc/rec*100):0;
-
-  // unique clients (excluding generic "Clientes X")
   const clisUnicos = new Set(eAno.filter(e=>!e.cliente.startsWith('Clientes ')).map(e=>e.cliente));
   const ticket = clisUnicos.size>0 ? rec/clisUnicos.size : 0;
 
@@ -1473,129 +1640,123 @@ function renderRelatorio() {
   set('rel-ticket-sub', clisUnicos.size+' clientes');
   document.getElementById('rel-luc').className = 'kpi-val '+(luc>=0?'g':'red');
 
-  // sync select
-  const sel = document.getElementById('rel-ano-select');
-  if (sel) sel.value = relAno;
-
-  // Meses data
-  const mData = [];
-  for(let m=1;m<=12;m++){
-    const r=eAno.filter(e=>e.mes==m).reduce((a,b)=>a+b.valor,0);
-    const s=sAno.filter(e=>e.mes==m).reduce((a,b)=>a+b.valor,0);
-    mData.push({m, r, s, l:r-s});
-  }
-  const comDados = mData.filter(d=>d.r>0||d.s>0);
-
-  // Melhor / pior mês por lucro
-  if(comDados.length>0){
-    const melhor = comDados.reduce((a,b)=>b.l>a.l?b:a);
-    const pior   = comDados.reduce((a,b)=>b.l<a.l?b:a);
-    set('rel-melhor-mes', MESES_S[melhor.m-1]);
-    set('rel-melhor-val', mv(melhor.l, fmtK(melhor.l)+' lucro'));
-    set('rel-pior-mes',   MESES_S[pior.m-1]);
-    set('rel-pior-val',   mv(pior.l,   fmtK(Math.abs(pior.l))+(pior.l<0?' déficit':' lucro')));
-  } else {
-    ['rel-melhor-mes','rel-pior-mes'].forEach(id=>set(id,'—'));
-    ['rel-melhor-val','rel-pior-val'].forEach(id=>set(id,''));
-  }
-
-  // Gráfico mensal receita x despesa
-  const maxG = Math.max(1,...mData.map(d=>Math.max(d.r,d.s)));
+  // ── GRÁFICO — anual mostra 12 meses, mensal mostra semana a semana ──────
   const grafEl = document.getElementById('rel-grafico');
-  if(comDados.length===0){
-    grafEl.innerHTML='<div class="empty">Sem dados em '+relAno+'</div>';
+  if (relModo === 'anual') {
+    const mData = [];
+    for(let m=1;m<=12;m++){
+      const r=entradas.filter(e=>e.ano==relAno&&e.mes==m).reduce((a,b)=>a+b.valor,0);
+      const s=saidas.filter(e=>e.ano==relAno&&e.mes==m).reduce((a,b)=>a+b.valor,0);
+      mData.push({label:MESES_S[m-1], r, s, l:r-s});
+    }
+    const comDados = mData.filter(d=>d.r>0||d.s>0);
+    const maxG = Math.max(1,...mData.map(d=>Math.max(d.r,d.s)));
+    if(comDados.length===0){ grafEl.innerHTML='<div class="empty">Sem dados em '+relAno+'</div>'; }
+    else {
+      let g='<div style="padding:8px 0">';
+      g+='<div style="display:flex;gap:16px;padding:0 14px 8px;font-size:11px;color:var(--muted)">'
+        +'<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--brand);display:inline-block"></span>Receita</span>'
+        +'<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block"></span>Despesas</span>'
+        +'</div>';
+      mData.forEach(d=>{
+        if(!d.r&&!d.s) return;
+        const pr=Math.round(d.r/maxG*100), ps=Math.round(d.s/maxG*100);
+        g+=`<div style="display:flex;align-items:center;gap:8px;padding:5px 14px">
+          <div style="font-size:11px;color:var(--muted);width:28px;flex-shrink:0">${d.label}</div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+            <div style="height:6px;border-radius:3px;background:var(--brand);width:${pr}%"></div>
+            <div style="height:6px;border-radius:3px;background:var(--red);width:${ps}%"></div>
+          </div>
+          <div style="font-size:11px;font-family:'Oswald',sans-serif;font-weight:500;color:${d.l>=0?'var(--brand-dark)':'var(--red)'};width:64px;text-align:right">${mv(d.l,(d.l>=0?'+':'')+fmtK(Math.abs(d.l)))}</div>
+        </div>`;
+      });
+      g+='</div>';
+      grafEl.innerHTML=g;
+    }
+
+    // melhor/pior mês
+    const comD2 = mData.filter(d=>d.r>0||d.s>0);
+    if(comD2.length>0){
+      const melhor=comD2.reduce((a,b)=>b.l>a.l?b:a);
+      const pior=comD2.reduce((a,b)=>b.l<a.l?b:a);
+      set('rel-melhor-mes', melhor.label);
+      set('rel-melhor-val', mv(melhor.l, fmtK(melhor.l)+' lucro'));
+      set('rel-pior-mes', pior.label);
+      set('rel-pior-val', mv(pior.l, fmtK(Math.abs(pior.l))+(pior.l<0?' déficit':' lucro')));
+    } else {
+      ['rel-melhor-mes','rel-pior-mes'].forEach(id=>set(id,'—'));
+      ['rel-melhor-val','rel-pior-val'].forEach(id=>set(id,''));
+    }
   } else {
-    let g='<div style="padding:8px 0">';
-    // legend
-    g+='<div style="display:flex;gap:16px;padding:0 14px 8px;font-size:11px;color:var(--muted)">'
-      +'<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--brand);display:inline-block"></span>Receita</span>'
-      +'<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block"></span>Despesas</span>'
-      +'</div>';
-    mData.forEach(d=>{
-      if(!d.r&&!d.s) return;
-      const pr=Math.round(d.r/maxG*100), ps=Math.round(d.s/maxG*100);
-      const ok=d.l>=0;
-      g+=`<div style="display:flex;align-items:center;gap:8px;padding:5px 14px">
-        <div style="font-size:11px;color:var(--muted);width:28px;flex-shrink:0">${MESES_S[d.m-1]}</div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:2px">
-          <div style="height:6px;border-radius:3px;background:var(--brand);width:${pr}%"></div>
-          <div style="height:6px;border-radius:3px;background:var(--red);width:${ps}%"></div>
+    // MODO MENSAL — show daily breakdown
+    const label = MESES[relMes-1]+' '+relAno;
+    grafEl.innerHTML = `<div style="padding:12px 14px">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px">${label}</div>
+      <div style="display:flex;justify-content:space-between;gap:10px">
+        <div style="flex:1;background:var(--brand-light);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--brand-dark)">Receitas</div>
+          <div style="font-size:18px;font-weight:600;font-family:'Oswald',sans-serif;color:var(--brand-dark)">${mv(rec,fmtK(rec))}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${eAno.length} lançamentos</div>
         </div>
-        <div style="font-size:11px;font-family:'Oswald',sans-serif;font-weight:500;color:${ok?'var(--brand-dark)':'var(--red)'};width:64px;text-align:right">${mv(d.l,(ok?'+':'')+fmtK(Math.abs(d.l)))}</div>
-      </div>`;
-    });
-    g+='</div>';
-    grafEl.innerHTML=g;
+        <div style="flex:1;background:var(--red-light);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--red)">Despesas</div>
+          <div style="font-size:18px;font-weight:600;font-family:'Oswald',sans-serif;color:var(--red)">${mv(sai,fmtK(sai))}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${sAno.length} lançamentos</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;background:${luc>=0?'var(--brand-light)':'var(--red-light)'};border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:11px;color:${luc>=0?'var(--brand-dark)':'var(--red)'}">Lucro do mês</div>
+        <div style="font-size:24px;font-weight:600;font-family:'Oswald',sans-serif;color:${luc>=0?'var(--brand-dark)':'var(--red)'}">${mv(luc,fmt(luc))}</div>
+      </div>
+    </div>`;
+    set('rel-melhor-mes','—'); set('rel-pior-mes','—');
+    set('rel-melhor-val',''); set('rel-pior-val','');
   }
 
-  // Top clientes
+  // ── TOP CLIENTES ────────────────────────────────────────────────────────
   const cliMap={};
-  eAno.filter(e=>!e.cliente.startsWith('Clientes ')).forEach(e=>{
-    cliMap[e.cliente]=(cliMap[e.cliente]||0)+e.valor;
-  });
-  const topCli = Object.entries(cliMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  const maxCli = topCli.length>0?topCli[0][1]:1;
-  const cliEl  = document.getElementById('rel-clientes');
-  if(topCli.length===0){
-    cliEl.innerHTML='<div class="empty">Sem clientes em '+relAno+'</div>';
-  } else {
-    cliEl.innerHTML = topCli.map(([nome,val],i)=>{
-      const p=Math.round(val/maxCli*100);
-      const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
-      return `<div class="bar-row">
-        <div style="font-size:12px;color:var(--text);width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0">${medal} ${nome}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${p}%;background:var(--brand)"></div></div>
-        <div class="bar-val">${mv(val,fmtK(val))}</div>
-      </div>`;
-    }).join('');
-  }
+  eAno.filter(e=>!e.cliente.startsWith('Clientes ')).forEach(e=>{cliMap[e.cliente]=(cliMap[e.cliente]||0)+e.valor;});
+  const topCli=Object.entries(cliMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxCli=topCli.length>0?topCli[0][1]:1;
+  document.getElementById('rel-clientes').innerHTML=topCli.length?topCli.map(([nome,val],i)=>{
+    const p=Math.round(val/maxCli*100);
+    const m=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+    return `<div class="bar-row">
+      <div style="font-size:12px;color:var(--text);width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0">${m} ${nome}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${p}%;background:var(--brand)"></div></div>
+      <div class="bar-val">${mv(val,fmtK(val))}</div>
+    </div>`;
+  }).join(''):'<div class="empty">Sem clientes</div>';
 
-  // Despesas por categoria
+  // ── CATEGORIAS ──────────────────────────────────────────────────────────
   const catMap={};
-  sAno.forEach(s=>{ catMap[s.cat]=(catMap[s.cat]||0)+s.valor; });
+  sAno.forEach(s=>{catMap[s.cat]=(catMap[s.cat]||0)+s.valor;});
   const catColors={'Pessoal / Colaboradores':'var(--grafite)','Marketing / Investimento':'var(--brand)','Impostos / Taxas':'var(--yellow)','Despesas Gerais':'var(--gray3)','Outros':'var(--gray3)'};
   const maxCat=Math.max(1,...Object.values(catMap));
-  const catEl=document.getElementById('rel-categorias');
-  catEl.innerHTML=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).map(([cat,v])=>{
-    const p=Math.round(v/maxCat*100);
-    const pct=sai>0?(v/sai*100).toFixed(0)+'%':'0%';
+  document.getElementById('rel-categorias').innerHTML=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).map(([cat,v])=>{
+    const p=Math.round(v/maxCat*100), pct=sai>0?(v/sai*100).toFixed(0)+'%':'0%';
     return `<div class="bar-row">
       <div style="font-size:11px;color:var(--muted);width:52px;flex-shrink:0">${cat.split(' / ')[0]}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${catColors[cat]||'var(--grafite)'}"></div></div>
       <div style="font-size:12px;font-family:'Oswald',sans-serif;font-weight:500;color:var(--text);width:78px;text-align:right;flex-shrink:0">${mv(v,fmtK(v))} <span style="color:var(--muted);font-size:10px">${pct}</span></div>
     </div>`;
-  }).join('') || '<div class="empty">Sem despesas em '+relAno+'</div>';
+  }).join('')||'<div class="empty">Sem despesas</div>';
 
-  // Comparativo anual
-  const anos=[2024,2025,2026,2027,2028];
-  const compEl=document.getElementById('rel-comparativo');
+  // ── COMPARATIVO ─────────────────────────────────────────────────────────
+  const anos=[2024,2025,2026,2027,2028,2029,2030];
   const compRows=anos.map(ano=>{
     const r=entradas.filter(e=>e.ano==ano).reduce((a,b)=>a+b.valor,0);
     const s=saidas.filter(e=>e.ano==ano).reduce((a,b)=>a+b.valor,0);
     if(!r&&!s) return null;
     const l=r-s;
-    const ok=l>=0;
     return `<div class="list-row" style="${ano==relAno?'background:var(--brand-light)':''}">
-      <div><div class="list-name" style="font-family:'Oswald',sans-serif">${ano}</div><div class="list-sub">${[...new Set(entradas.filter(e=>e.ano==ano).map(e=>e.mes))].length} meses</div></div>
+      <div><div class="list-name" style="font-family:'Oswald',sans-serif">${ano}</div>
+      <div class="list-sub">${[...new Set(entradas.filter(e=>e.ano==ano).map(e=>e.mes))].length} meses</div></div>
       <div style="text-align:right">
         <div style="font-size:13px;font-weight:500;color:var(--brand-dark);font-family:'Oswald',sans-serif">${mv(r,fmtK(r))}</div>
-        <div style="font-size:11px;color:${ok?'var(--brand-dark)':'var(--red)'}">lucro ${mv(l,fmtK(l))}</div>
+        <div style="font-size:11px;color:${l>=0?'var(--brand-dark)':'var(--red)'}">lucro ${mv(l,fmtK(l))}</div>
       </div>
     </div>`;
   }).filter(Boolean);
-  compEl.innerHTML=compRows.length?compRows.join(''):'<div class="empty">Sem dados</div>';
+  document.getElementById('rel-comparativo').innerHTML=compRows.length?compRows.join(''):'<div class="empty">Sem dados</div>';
 }
-
-// ── INIT ───────────────────────────────────────────────────────────────────
-document.getElementById('ent-mes').value = CUR_MES;
-document.getElementById('sai-mes').value = CUR_MES;
-document.getElementById('ent-ano').value = CUR_ANO;
-document.getElementById('sai-ano').value = CUR_ANO;
-(function() {
-  var ds = document.getElementById('dash-ano-select'); if(ds) ds.value = CUR_ANO;
-  var rs = document.getElementById('rel-ano-select');  if(rs) rs.value = CUR_ANO;
-})();
-loadDB();
-</script>
-</body>
-</html>
