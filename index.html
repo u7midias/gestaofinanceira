@@ -428,15 +428,23 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
             </select>
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-lbl">Categoria</label>
-          <select id="sai-cat">
-            <option>Pessoal / Colaboradores</option>
-            <option>Marketing / Investimento</option>
-            <option>Impostos / Taxas</option>
-            <option>Despesas Gerais</option>
-            <option>Outros</option>
-          </select>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-lbl">Categoria</label>
+            <select id="sai-cat">
+              <option>Pessoal / Colaboradores</option>
+              <option>Marketing / Investimento</option>
+              <option>Impostos / Taxas</option>
+              <option>Despesas Gerais</option>
+              <option>Outros</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-lbl">Status</label>
+            <select id="sai-status">
+              <option>Pago</option><option>Pendente</option>
+            </select>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-lbl">Observação</label>
@@ -817,7 +825,7 @@ async function loadDB() {
     DB.saidas = (saidas||[]).map(s => ({
       id: s.id, desc: s.descricao, valor: parseFloat(s.valor)||0,
       dia: s.dia||1, mes: s.mes, ano: s.ano,
-      cat: s.categoria||'Outros', obs: s.obs||''
+      cat: s.categoria||'Outros', status: s.status||'Pago', obs: s.obs||''
     }));
     DB.colab = (equipe||[]).map(c => ({
       id: c.id, nome: c.nome, func: c.funcao||'',
@@ -848,7 +856,7 @@ async function apiInsertSaida(s) {
   return sb('saidas', 'POST', {
     id: s.id, descricao: s.desc, valor: s.valor,
     dia: s.dia, mes: s.mes, ano: s.ano,
-    categoria: s.cat, obs: s.obs
+    categoria: s.cat, status: s.status||'Pago', obs: s.obs
   });
 }
 async function apiInsertColab(c) {
@@ -1117,7 +1125,7 @@ function render() {
     document.getElementById('det-saidas').innerHTML = sM.length ? sM.map(s=>`
       <div class="list-row">
         <div style="flex:1;min-width:0"><div class="list-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.desc}</div><div class="list-sub">${s.cat.split(' / ')[0]} · dia ${s.dia}</div></div>
-        <div class="list-right"><div class="amt-neg">-${mv(s.valor, fmt(s.valor))}</div></div>
+        <div class="list-right"><div class="amt-neg">-${mv(s.valor, fmt(s.valor))}</div><span class="badge ${s.status==='Pago'?'br':'by'}">${s.status||'Pago'}</span></div>
         <button class="del-btn" onclick="askDelete('saidas','${s.id}','${s.desc}')">✕</button>
       </div>`).join('') : '<div class="empty">Sem saídas</div>';
   } else {
@@ -1161,7 +1169,7 @@ function render() {
   document.getElementById('list-saidas').innerHTML = recSai.length ? recSai.map(s=>`
     <div class="list-row">
       <div style="flex:1;min-width:0"><div class="list-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.desc}</div><div class="list-sub">${MESES_S[s.mes-1]} ${s.ano} · ${s.cat.split(' / ')[0]}</div></div>
-      <div class="list-right"><div class="amt-neg">-${mv(s.valor, fmt(s.valor))}</div></div>
+      <div class="list-right"><div class="amt-neg">-${mv(s.valor, fmt(s.valor))}</div><span class="badge ${s.status==='Pago'?'br':'by'}">${s.status||'Pago'}</span></div>
       <button class="del-btn" onclick="askDelete('saidas','${s.id}','${s.desc}')">✕</button>
     </div>`).join('') : '<div class="empty">Nenhuma saída</div>';
 
@@ -1227,6 +1235,7 @@ async function salvarSaida() {
     mes: parseInt(document.getElementById('sai-mes').value),
     ano: parseInt(document.getElementById('sai-ano').value),
     cat: document.getElementById('sai-cat').value,
+    status: document.getElementById('sai-status').value,
     obs: document.getElementById('sai-obs').value
   };
   try {
@@ -1588,7 +1597,7 @@ function renderBusca() {
     html2 += saisFilt.slice(0,10).map(s=>`
       <div class="list-row">
         <div style="flex:1;min-width:0"><div class="list-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.desc}</div><div class="list-sub">${MESES_S[s.mes-1]} ${s.ano} · ${s.cat.split(' / ')[0]}</div></div>
-        <div class="list-right"><div class="amt-neg">-${mv(s.valor,fmt(s.valor))}</div></div>
+        <div class="list-right"><div class="amt-neg">-${mv(s.valor,fmt(s.valor))}</div><span class="badge ${s.status==='Pago'?'br':'by'}">${s.status||'Pago'}</span></div>
       </div>`).join('');
   }
   if (!html2) html2 = '<div class="empty">Nenhum resultado encontrado</div>';
