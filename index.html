@@ -714,6 +714,93 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   </div>
 </div>
 
+<!-- MODAL EDITAR ENTRADA -->
+<div class="modal-overlay" id="modal-edit-ent">
+  <div class="modal">
+    <button class="modal-close" onclick="document.getElementById('modal-edit-ent').classList.remove('open')">✕</button>
+    <div class="modal-title">Editar entrada</div>
+    <div class="form-group"><label class="form-lbl">Cliente</label><input type="text" id="edit-ent-cliente"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Valor (R$)</label><input type="number" id="edit-ent-valor" step="0.01"></div>
+      <div class="form-group"><label class="form-lbl">Dia</label><input type="number" id="edit-ent-dia" min="1" max="31"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Mês</label>
+        <select id="edit-ent-mes">
+          <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+          <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+          <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+          <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-lbl">Ano</label>
+        <select id="edit-ent-ano">
+          <option>2024</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option>
+          <option>2029</option><option>2030</option><option>2031</option><option>2032</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Status</label>
+        <select id="edit-ent-status"><option>Pago</option><option>Pendente</option></select>
+      </div>
+      <div class="form-group"><label class="form-lbl">Competência</label>
+        <select id="edit-ent-comp"><option>Mês corrente</option><option>Mês seguinte</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-lbl">Observação</label><input type="text" id="edit-ent-obs"></div>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="document.getElementById('modal-edit-ent').classList.remove('open')">Cancelar</button>
+      <button class="save-btn" style="flex:2;margin:0" onclick="confirmarEditEntrada()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR SAÍDA -->
+<div class="modal-overlay" id="modal-edit-sai">
+  <div class="modal">
+    <button class="modal-close" onclick="document.getElementById('modal-edit-sai').classList.remove('open')">✕</button>
+    <div class="modal-title">Editar saída</div>
+    <div class="form-group"><label class="form-lbl">Descrição</label><input type="text" id="edit-sai-desc"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Valor (R$)</label><input type="number" id="edit-sai-valor" step="0.01"></div>
+      <div class="form-group"><label class="form-lbl">Dia</label><input type="number" id="edit-sai-dia" min="1" max="31"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Mês</label>
+        <select id="edit-sai-mes">
+          <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+          <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+          <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+          <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-lbl">Ano</label>
+        <select id="edit-sai-ano">
+          <option>2024</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option>
+          <option>2029</option><option>2030</option><option>2031</option><option>2032</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Categoria</label>
+        <select id="edit-sai-cat">
+          <option>Pessoal / Colaboradores</option><option>Marketing / Investimento</option>
+          <option>Impostos / Taxas</option><option>Despesas Gerais</option><option>Outros</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-lbl">Status</label>
+        <select id="edit-sai-status"><option>Pago</option><option>Pendente</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-lbl">Observação</label><input type="text" id="edit-sai-obs"></div>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="document.getElementById('modal-edit-sai').classList.remove('open')">Cancelar</button>
+      <button class="save-btn" style="flex:2;margin:0" onclick="confirmarEditSaida()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap"><div class="toast" id="toast"></div></div>
 
 <script>
@@ -904,6 +991,88 @@ async function apiUpdateStatus(id, status) {
 }
 async function apiUpdateStatusSaida(id, status) {
   return sb('saidas?id=eq.' + encodeURIComponent(id), 'PATCH', { status });
+}
+async function apiEditEntrada(e) {
+  return sb('entradas?id=eq.' + encodeURIComponent(e.id), 'PATCH', {
+    cliente: e.cliente, valor: e.valor, dia: e.dia, mes: e.mes, ano: e.ano,
+    status: e.status, comp: e.comp, obs: e.obs
+  });
+}
+async function apiEditSaida(s) {
+  return sb('saidas?id=eq.' + encodeURIComponent(s.id), 'PATCH', {
+    descricao: s.desc, valor: s.valor, dia: s.dia, mes: s.mes, ano: s.ano,
+    categoria: s.cat, status: s.status, obs: s.obs
+  });
+}
+
+let _editId = null;
+
+function abrirEditEntrada(id) {
+  const e = DB.entradas.find(x => x.id == id);
+  if (!e) return;
+  _editId = id;
+  document.getElementById('edit-ent-cliente').value = e.cliente;
+  document.getElementById('edit-ent-valor').value   = e.valor;
+  document.getElementById('edit-ent-dia').value     = e.dia;
+  document.getElementById('edit-ent-mes').value     = e.mes;
+  document.getElementById('edit-ent-ano').value     = e.ano;
+  document.getElementById('edit-ent-status').value  = e.status||'Pago';
+  document.getElementById('edit-ent-comp').value    = e.comp||'Mês corrente';
+  document.getElementById('edit-ent-obs').value     = e.obs||'';
+  document.getElementById('modal-edit-ent').classList.add('open');
+}
+
+async function confirmarEditEntrada() {
+  const e = DB.entradas.find(x => x.id == _editId);
+  if (!e) return;
+  e.cliente = document.getElementById('edit-ent-cliente').value.trim();
+  e.valor   = parseFloat(document.getElementById('edit-ent-valor').value)||0;
+  e.dia     = parseInt(document.getElementById('edit-ent-dia').value)||1;
+  e.mes     = parseInt(document.getElementById('edit-ent-mes').value);
+  e.ano     = parseInt(document.getElementById('edit-ent-ano').value);
+  e.status  = document.getElementById('edit-ent-status').value;
+  e.comp    = document.getElementById('edit-ent-comp').value;
+  e.obs     = document.getElementById('edit-ent-obs').value;
+  try {
+    await apiEditEntrada(e);
+    document.getElementById('modal-edit-ent').classList.remove('open');
+    showToast('Entrada atualizada!');
+    render();
+  } catch(err) { showToast('Erro: ' + err.message, true); }
+}
+
+function abrirEditSaida(id) {
+  const s = DB.saidas.find(x => x.id == id);
+  if (!s) return;
+  _editId = id;
+  document.getElementById('edit-sai-desc').value   = s.desc;
+  document.getElementById('edit-sai-valor').value  = s.valor;
+  document.getElementById('edit-sai-dia').value    = s.dia;
+  document.getElementById('edit-sai-mes').value    = s.mes;
+  document.getElementById('edit-sai-ano').value    = s.ano;
+  document.getElementById('edit-sai-cat').value    = s.cat||'Outros';
+  document.getElementById('edit-sai-status').value = s.status||'Pago';
+  document.getElementById('edit-sai-obs').value    = s.obs||'';
+  document.getElementById('modal-edit-sai').classList.add('open');
+}
+
+async function confirmarEditSaida() {
+  const s = DB.saidas.find(x => x.id == _editId);
+  if (!s) return;
+  s.desc   = document.getElementById('edit-sai-desc').value.trim();
+  s.valor  = parseFloat(document.getElementById('edit-sai-valor').value)||0;
+  s.dia    = parseInt(document.getElementById('edit-sai-dia').value)||1;
+  s.mes    = parseInt(document.getElementById('edit-sai-mes').value);
+  s.ano    = parseInt(document.getElementById('edit-sai-ano').value);
+  s.cat    = document.getElementById('edit-sai-cat').value;
+  s.status = document.getElementById('edit-sai-status').value;
+  s.obs    = document.getElementById('edit-sai-obs').value;
+  try {
+    await apiEditSaida(s);
+    document.getElementById('modal-edit-sai').classList.remove('open');
+    showToast('Saída atualizada!');
+    render();
+  } catch(err) { showToast('Erro: ' + err.message, true); }
 }
 
 // ── SEED HISTÓRICO ─────────────────────────────────────────────────────────
@@ -1154,12 +1323,14 @@ function render() {
       <div class="list-row">
         <div style="flex:1;min-width:0"><div class="list-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.cliente}</div><div class="list-sub">dia ${e.dia}</div></div>
         <div class="list-right"><div class="amt-pos">+${mv(e.valor, fmt(e.valor))}</div><span class="badge ${e.status==='Pago'?'bg':'by'}">${e.status}</span></div>
+        <button class="del-btn" style="color:var(--muted);font-size:15px" onclick="abrirEditEntrada('${e.id}')" title="Editar">✎</button>
         <button class="del-btn" onclick="askDelete('entradas','${e.id}','${e.cliente}')">✕</button>
       </div>`).join('') : '<div class="empty">Sem entradas</div>';
     document.getElementById('det-saidas').innerHTML = sM.length ? sM.map(s=>`
       <div class="list-row">
         <div style="flex:1;min-width:0"><div class="list-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.desc}</div><div class="list-sub">${s.cat.split(' / ')[0]} · dia ${s.dia}</div></div>
         <div class="list-right"><div class="amt-neg">-${mv(s.valor, fmt(s.valor))}</div><span class="badge ${s.status==='Pago'?'br':'by'}">${s.status||'Pago'}</span></div>
+        <button class="del-btn" style="color:var(--muted);font-size:15px" onclick="abrirEditSaida('${s.id}')" title="Editar">✎</button>
         <button class="del-btn" onclick="askDelete('saidas','${s.id}','${s.desc}')">✕</button>
       </div>`).join('') : '<div class="empty">Sem saídas</div>';
   } else {
@@ -1195,6 +1366,7 @@ function render() {
     <div class="list-row">
       <div style="flex:1;min-width:0"><div class="list-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.cliente}</div><div class="list-sub">${MESES_S[e.mes-1]} ${e.ano} · dia ${e.dia}</div></div>
       <div class="list-right"><div class="amt-pos">+${mv(e.valor, fmt(e.valor))}</div><span class="badge ${e.status==='Pago'?'bg':'by'}">${e.status}</span></div>
+      <button class="del-btn" style="color:var(--muted);font-size:15px" onclick="abrirEditEntrada('${e.id}')" title="Editar">✎</button>
       <button class="del-btn" onclick="askDelete('entradas','${e.id}','${e.cliente}')">✕</button>
     </div>`).join('') : '<div class="empty">Nenhuma entrada</div>';
 
@@ -1204,6 +1376,7 @@ function render() {
     <div class="list-row">
       <div style="flex:1;min-width:0"><div class="list-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.desc}</div><div class="list-sub">${MESES_S[s.mes-1]} ${s.ano} · ${s.cat.split(' / ')[0]}</div></div>
       <div class="list-right"><div class="amt-neg">-${mv(s.valor, fmt(s.valor))}</div><span class="badge ${s.status==='Pago'?'br':'by'}">${s.status||'Pago'}</span></div>
+      <button class="del-btn" style="color:var(--muted);font-size:15px" onclick="abrirEditSaida('${s.id}')" title="Editar">✎</button>
       <button class="del-btn" onclick="askDelete('saidas','${s.id}','${s.desc}')">✕</button>
     </div>`).join('') : '<div class="empty">Nenhuma saída</div>';
 
@@ -1433,6 +1606,14 @@ async function confirmarLimparAno() {
 document.getElementById('modal-limpar').addEventListener('click', e => {
   if (e.target === document.getElementById('modal-limpar'))
     document.getElementById('modal-limpar').classList.remove('open');
+});
+document.getElementById('modal-edit-ent').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-edit-ent'))
+    document.getElementById('modal-edit-ent').classList.remove('open');
+});
+document.getElementById('modal-edit-sai').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-edit-sai'))
+    document.getElementById('modal-edit-sai').classList.remove('open');
 });
 
 // ── EXPORTAR ───────────────────────────────────────────────────────────────
