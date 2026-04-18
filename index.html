@@ -384,6 +384,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
             </select>
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-lbl">Recorrência</label>
+            <select id="ent-recorrente">
+              <option value="nao">Não repete</option>
+              <option value="mensal">Todo mês</option>
+              <option value="anual">Todo ano</option>
+            </select>
+          </div>
+          <div class="form-group" id="ent-recorrente-ate-wrap" style="display:none">
+            <label class="form-lbl">Até (mês/ano)</label>
+            <input type="month" id="ent-recorrente-ate" style="padding:10px 10px">
+          </div>
+        </div>
         <div class="form-group">
           <label class="form-lbl">Observação</label>
           <input type="text" id="ent-obs" placeholder="Opcional">
@@ -446,6 +460,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
             </select>
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-lbl">Recorrência</label>
+            <select id="sai-recorrente">
+              <option value="nao">Não repete</option>
+              <option value="mensal">Todo mês</option>
+              <option value="anual">Todo ano</option>
+            </select>
+          </div>
+          <div class="form-group" id="sai-recorrente-ate-wrap" style="display:none">
+            <label class="form-lbl">Até (mês/ano)</label>
+            <input type="month" id="sai-recorrente-ate" style="padding:10px 10px">
+          </div>
+        </div>
         <div class="form-group">
           <label class="form-lbl">Observação</label>
           <input type="text" id="sai-obs" placeholder="Opcional">
@@ -498,6 +526,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 
       <div class="sec">Pendentes — a cobrar</div>
       <div class="card" id="alert-pendentes"></div>
+
+      <div class="sec">Saídas pendentes — a pagar</div>
+      <div class="card" id="alert-saidas-pendentes"></div>
 
       <div class="sec">Folha da equipe este mês</div>
       <div class="card" id="alert-pagar"></div>
@@ -871,6 +902,9 @@ async function apiDelete(table, id) {
 async function apiUpdateStatus(id, status) {
   return sb('entradas?id=eq.' + encodeURIComponent(id), 'PATCH', { status });
 }
+async function apiUpdateStatusSaida(id, status) {
+  return sb('saidas?id=eq.' + encodeURIComponent(id), 'PATCH', { status });
+}
 
 // ── SEED HISTÓRICO ─────────────────────────────────────────────────────────
 async function seedHistorico() {
@@ -1194,6 +1228,16 @@ function render() {
       <div style="flex:1"><div class="alert-text">${e.cliente} — ${mv(e.valor, fmt(e.valor))}</div><div class="alert-sub">Pendente · ${MESES_S[e.mes-1]} ${e.ano} · dia ${e.dia}</div></div>
       <button class="del-btn" style="color:var(--brand);font-size:16px" onclick="marcarPago('${e.id}')" title="Marcar como pago">✓</button>
     </div>`).join('') : '<div class="empty">Nenhum pendente 🎉</div>';
+
+  // Saídas pendentes
+  const saidasPendentes = saidas.filter(s=>s.status==='Pendente').sort((a,b)=>(a.ano*100+a.mes)-(b.ano*100+b.mes));
+  document.getElementById('alert-saidas-pendentes').innerHTML = saidasPendentes.length ? saidasPendentes.map(s=>`
+    <div class="alert-row">
+      <div class="adot" style="background:var(--yellow)"></div>
+      <div style="flex:1"><div class="alert-text">${s.desc} — ${mv(s.valor, fmt(s.valor))}</div><div class="alert-sub">Pendente · ${MESES_S[s.mes-1]} ${s.ano} · ${s.cat.split(' / ')[0]}</div></div>
+      <button class="del-btn" style="color:var(--brand);font-size:16px" onclick="marcarSaidaPaga('${s.id}')" title="Marcar como pago">✓</button>
+    </div>`).join('') : '<div class="empty">Nenhuma saída pendente 🎉</div>';
+
   renderContas();
   document.getElementById('alert-pagar').innerHTML = colab.filter(c=>!isNaN(c.valor)&&parseFloat(c.valor)>0).map(c=>`
     <div class="alert-row">
@@ -1207,20 +1251,48 @@ async function salvarEntrada() {
   const cliente = document.getElementById('ent-cliente').value.trim();
   const valor   = parseFloat(document.getElementById('ent-valor').value);
   if (!cliente || !valor || valor<=0) { showToast('Preencha cliente e valor', true); return; }
-  const entry = {
-    id: uid(), cliente, valor,
-    dia:    parseInt(document.getElementById('ent-dia').value)||1,
-    mes:    parseInt(document.getElementById('ent-mes').value),
-    ano:    parseInt(document.getElementById('ent-ano').value),
-    status: document.getElementById('ent-status').value,
-    comp:   document.getElementById('ent-comp').value,
-    obs:    document.getElementById('ent-obs').value
-  };
+  const mesInicio = parseInt(document.getElementById('ent-mes').value);
+  const anoInicio = parseInt(document.getElementById('ent-ano').value);
+  const recorrente = document.getElementById('ent-recorrente').value;
+  const ateVal = document.getElementById('ent-recorrente-ate').value; // "YYYY-MM"
+
+  // Monta lista de {mes, ano} a lançar
+  const periodos = [];
+  if (recorrente === 'nao') {
+    periodos.push({ mes: mesInicio, ano: anoInicio });
+  } else if (recorrente === 'mensal') {
+    let m = mesInicio, a = anoInicio;
+    const [ateAno, ateMes] = ateVal ? ateVal.split('-').map(Number) : [anoInicio + 1, mesInicio - 1 || 12];
+    while (a < ateAno || (a === ateAno && m <= ateMes)) {
+      periodos.push({ mes: m, ano: a });
+      m++; if (m > 12) { m = 1; a++; }
+      if (periodos.length > 120) break; // segurança
+    }
+  } else if (recorrente === 'anual') {
+    const [ateAno] = ateVal ? ateVal.split('-').map(Number) : [anoInicio + 4];
+    for (let a = anoInicio; a <= ateAno && periodos.length <= 20; a++) {
+      periodos.push({ mes: mesInicio, ano: a });
+    }
+  }
+
   try {
-    await apiInsertEntrada(entry);
-    DB.entradas.push(entry);
+    for (const p of periodos) {
+      const entry = {
+        id: uid(), cliente, valor,
+        dia:    parseInt(document.getElementById('ent-dia').value)||1,
+        mes:    p.mes, ano: p.ano,
+        status: document.getElementById('ent-status').value,
+        comp:   document.getElementById('ent-comp').value,
+        obs:    document.getElementById('ent-obs').value
+      };
+      await apiInsertEntrada(entry);
+      DB.entradas.push(entry);
+    }
     ['ent-cliente','ent-valor','ent-dia','ent-obs'].forEach(id => document.getElementById(id).value='');
-    showToast('Entrada salva!');
+    document.getElementById('ent-recorrente').value = 'nao';
+    document.getElementById('ent-recorrente-ate').value = '';
+    document.getElementById('ent-recorrente-ate-wrap').style.display = 'none';
+    showToast(periodos.length > 1 ? `${periodos.length} entradas lançadas! 🔁` : 'Entrada salva!');
     render();
   } catch(e) { showToast('Erro: ' + e.message, true); }
 }
@@ -1229,20 +1301,47 @@ async function salvarSaida() {
   const desc  = document.getElementById('sai-desc').value.trim();
   const valor = parseFloat(document.getElementById('sai-valor').value);
   if (!desc || !valor || valor<=0) { showToast('Preencha descrição e valor', true); return; }
-  const entry = {
-    id: uid(), desc, valor,
-    dia: parseInt(document.getElementById('sai-dia').value)||1,
-    mes: parseInt(document.getElementById('sai-mes').value),
-    ano: parseInt(document.getElementById('sai-ano').value),
-    cat: document.getElementById('sai-cat').value,
-    status: document.getElementById('sai-status').value,
-    obs: document.getElementById('sai-obs').value
-  };
+  const mesInicio = parseInt(document.getElementById('sai-mes').value);
+  const anoInicio = parseInt(document.getElementById('sai-ano').value);
+  const recorrente = document.getElementById('sai-recorrente').value;
+  const ateVal = document.getElementById('sai-recorrente-ate').value;
+
+  const periodos = [];
+  if (recorrente === 'nao') {
+    periodos.push({ mes: mesInicio, ano: anoInicio });
+  } else if (recorrente === 'mensal') {
+    let m = mesInicio, a = anoInicio;
+    const [ateAno, ateMes] = ateVal ? ateVal.split('-').map(Number) : [anoInicio + 1, mesInicio - 1 || 12];
+    while (a < ateAno || (a === ateAno && m <= ateMes)) {
+      periodos.push({ mes: m, ano: a });
+      m++; if (m > 12) { m = 1; a++; }
+      if (periodos.length > 120) break;
+    }
+  } else if (recorrente === 'anual') {
+    const [ateAno] = ateVal ? ateVal.split('-').map(Number) : [anoInicio + 4];
+    for (let a = anoInicio; a <= ateAno && periodos.length <= 20; a++) {
+      periodos.push({ mes: mesInicio, ano: a });
+    }
+  }
+
   try {
-    await apiInsertSaida(entry);
-    DB.saidas.push(entry);
+    for (const p of periodos) {
+      const entry = {
+        id: uid(), desc, valor,
+        dia: parseInt(document.getElementById('sai-dia').value)||1,
+        mes: p.mes, ano: p.ano,
+        cat: document.getElementById('sai-cat').value,
+        status: document.getElementById('sai-status').value,
+        obs: document.getElementById('sai-obs').value
+      };
+      await apiInsertSaida(entry);
+      DB.saidas.push(entry);
+    }
     ['sai-desc','sai-valor','sai-dia','sai-obs'].forEach(id => document.getElementById(id).value='');
-    showToast('Saída salva!');
+    document.getElementById('sai-recorrente').value = 'nao';
+    document.getElementById('sai-recorrente-ate').value = '';
+    document.getElementById('sai-recorrente-ate-wrap').style.display = 'none';
+    showToast(periodos.length > 1 ? `${periodos.length} saídas lançadas! 🔁` : 'Saída salva!');
     render();
   } catch(e) { showToast('Erro: ' + e.message, true); }
 }
@@ -1271,6 +1370,16 @@ async function marcarPago(id) {
     const e = DB.entradas.find(x=>x.id==id);
     if (e) e.status = 'Pago';
     showToast('Marcado como pago!');
+    render();
+  } catch(e) { showToast('Erro: ' + e.message, true); }
+}
+
+async function marcarSaidaPaga(id) {
+  try {
+    await apiUpdateStatusSaida(id, 'Pago');
+    const s = DB.saidas.find(x=>x.id==id);
+    if (s) s.status = 'Pago';
+    showToast('Saída marcada como paga!');
     render();
   } catch(e) { showToast('Erro: ' + e.message, true); }
 }
@@ -1544,7 +1653,8 @@ function renderContas() {
     return venc < hoje;
   }).length;
   const pendEntradas = DB.entradas.filter(e=>e.status==='Pendente').length;
-  document.getElementById('notif-count').textContent = pendEntradas + atrasadas;
+  const pendSaidas   = DB.saidas.filter(s=>s.status==='Pendente').length;
+  document.getElementById('notif-count').textContent = pendEntradas + pendSaidas + atrasadas;
 }
 
 
@@ -1783,6 +1893,16 @@ document.getElementById('sai-ano').value = CUR_ANO;
   on('rel-modo-mensal', 'click',  function(){ setRelModo('mensal'); });
   on('s-ent', 'click', function(){ setSeg('ent'); });
   on('s-sai', 'click', function(){ setSeg('sai'); });
+
+  // Mostrar/ocultar campo "Até" conforme recorrência
+  on('ent-recorrente', 'change', function(){
+    const wrap = document.getElementById('ent-recorrente-ate-wrap');
+    wrap.style.display = this.value !== 'nao' ? 'block' : 'none';
+  });
+  on('sai-recorrente', 'change', function(){
+    const wrap = document.getElementById('sai-recorrente-ate-wrap');
+    wrap.style.display = this.value !== 'nao' ? 'block' : 'none';
+  });
 
   // DEBUG — mostra resultado na tela
   fetch('https://fotssarkgylorfahkwaa.supabase.co/rest/v1/entradas?limit=2', {
