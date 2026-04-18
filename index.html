@@ -1227,6 +1227,7 @@ function render() {
       <div class="adot" style="background:var(--red)"></div>
       <div style="flex:1"><div class="alert-text">${e.cliente} — ${mv(e.valor, fmt(e.valor))}</div><div class="alert-sub">Pendente · ${MESES_S[e.mes-1]} ${e.ano} · dia ${e.dia}</div></div>
       <button class="del-btn" style="color:var(--brand);font-size:16px" onclick="marcarPago('${e.id}')" title="Marcar como pago">✓</button>
+      <button class="del-btn" onclick="askDelete('entradas','${e.id}','${e.cliente}')" title="Excluir">✕</button>
     </div>`).join('') : '<div class="empty">Nenhum pendente 🎉</div>';
 
   // Saídas pendentes
@@ -1236,6 +1237,7 @@ function render() {
       <div class="adot" style="background:var(--yellow)"></div>
       <div style="flex:1"><div class="alert-text">${s.desc} — ${mv(s.valor, fmt(s.valor))}</div><div class="alert-sub">Pendente · ${MESES_S[s.mes-1]} ${s.ano} · ${s.cat.split(' / ')[0]}</div></div>
       <button class="del-btn" style="color:var(--brand);font-size:16px" onclick="marcarSaidaPaga('${s.id}')" title="Marcar como pago">✓</button>
+      <button class="del-btn" onclick="askDelete('saidas','${s.id}','${s.desc}')" title="Excluir">✕</button>
     </div>`).join('') : '<div class="empty">Nenhuma saída pendente 🎉</div>';
 
   renderContas();
