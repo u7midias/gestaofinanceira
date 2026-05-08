@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FluxoPRO — Organização Financeira para Empreendedores</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --verde: #059669;
+      --verde-mid: #10b981;
+      --verde-light: #d1fae5;
+      --ouro: #d97706;
+      --ouro-light: #fef3c7;
+      --laranja: #ea580c;
+      --laranja-light: #ffedd5;
+      --preto: #111111;
+      --fundo: #f8f7f4;
+      --fundo-card: #ffffff;
+      --fundo-input: #f1f0ec;
+      --borda: #e0ddd6;
+      --borda-forte: #c8c4bc;
+      --texto: #1a1814;
+      --texto-muted: #6b6560;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #eeece8;
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    #app {
+      background: var(--fundo);
+      color: var(--texto);
+      width: 100%;
+      max-width: 520px;
+      border-radius: 20px;
+      padding: 2rem 1.75rem;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 0.5px solid var(--borda);
+    }
+
+    .logo-area h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--preto);
+      letter-spacing: -0.5px;
+    }
+
+    .logo-area p { font-size: 13px; color: var(--texto-muted); margin-top: 3px; }
+
+    .step-indicator { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--borda-forte); transition: background 0.3s; }
+    .step-dot.active { background: var(--verde); }
+    .step-dot.done { background: var(--ouro); }
+
+    .section-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--ouro);
+      margin-bottom: 1rem;
+    }
+
+    .card {
+      background: var(--fundo-card);
+      border: 0.5px solid var(--borda);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .field-label { font-size: 12px; color: var(--texto-muted); margin-bottom: 6px; font-weight: 500; }
+    .field-row { margin-bottom: 1.1rem; }
+    .field-row:last-child { margin-bottom: 0; }
+
+    .toggle-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .toggle-btn {
+      background: var(--fundo-input);
+      border: 0.5px solid var(--borda-forte);
+      color: var(--texto);
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 400;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn:hover { background: #e8e5de; border-color: #aaa; }
+
+    .toggle-btn.active {
+      background: var(--preto);
+      border-color: var(--preto);
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    .input-wrap {
+      display: flex;
+      align-items: center;
+      background: var(--fundo-card);
+      border: 0.5px solid var(--borda-forte);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .input-wrap:focus-within { border-color: var(--verde); box-shadow: 0 0 0 3px rgba(5,150,105,0.08); }
+
+    .prefix-label {
+      padding: 9px 12px;
+      font-size: 13px;
+      color: var(--texto-muted);
+      background: var(--fundo-input);
+      border-right: 0.5px solid var(--borda);
+      white-space: nowrap;
+    }
+
+    .input-wrap input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--texto);
+      padding: 9px 12px;
+      font-size: 14px;
+      font-family: 'Montserrat', sans-serif;
+      width: 100%;
+    }
+
+    .input-wrap input::placeholder { color: var(--borda-forte); }
+
+    .custos-toggle {
+      font-size: 12px;
+      color: var(--ouro);
+      cursor: pointer;
+      margin-top: 7px;
+      display: inline-block;
+      font-weight: 500;
+      user-select: none;
+    }
+
+    .custos-toggle:hover { text-decoration: underline; }
+
+    .custos-detalhe { display: none; margin-top: 12px; gap: 8px; flex-direction: column; }
+    .custos-detalhe.show { display: flex; }
+    .custos-item { display: flex; align-items: center; gap: 8px; }
+    .cat-label { font-size: 12px; color: var(--texto-muted); min-width: 100px; }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: var(--preto);
+      border: none;
+      border-radius: 10px;
+      color: #ffffff;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: opacity 0.2s, transform 0.1s;
+      margin-top: 1rem;
+    }
+
+    .btn-primary:hover { opacity: 0.82; }
+    .btn-primary:active { transform: scale(0.99); }
+
+    .btn-secondary {
+      background: transparent;
+      border: 0.5px solid var(--borda-forte);
+      color: var(--texto-muted);
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover { border-color: var(--preto); color: var(--texto); }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .balde { border-radius: 12px; padding: 1.25rem; margin-bottom: 10px; }
+    .balde-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+    .balde-nome { font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 700; }
+    .balde-valor { font-family: 'Montserrat', sans-serif; font-size: 20px; font-weight: 800; }
+    .balde-pct { font-size: 12px; margin-top: 2px; }
+    .bar-track { height: 4px; border-radius: 2px; background: rgba(0,0,0,0.08); margin-top: 10px; }
+    .bar-fill { height: 4px; border-radius: 2px; transition: width 0.8s ease; width: 0%; }
+
+    .semaforo-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid var(--borda); }
+    .semaforo-item:last-child { border-bottom: none; }
+    .semaforo-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .semaforo-texto { font-size: 13px; color: var(--texto); flex: 1; line-height: 1.4; }
+    .semaforo-status { font-size: 11px; font-weight: 700; white-space: nowrap; }
+
+    .rec-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 0.5px solid var(--borda); }
+    .rec-item:last-child { border-bottom: none; }
+    .rec-num { font-family: 'Montserrat', sans-serif; font-size: 18px; font-weight: 800; color: var(--laranja); min-width: 24px; }
+    .rec-titulo { font-size: 13px; font-weight: 500; color: var(--texto); }
+    .rec-detalhe { font-size: 12px; color: var(--texto-muted); margin-top: 3px; line-height: 1.5; }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      background: var(--fundo-card);
+      border: 0.5px solid var(--borda);
+      border-radius: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .total-label { font-size: 13px; color: var(--texto-muted); }
+    .total-valor { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 700; color: var(--verde); }
+
+    .divisor { height: 0.5px; background: var(--borda); margin: 1.25rem 0; }
+    .nav-row { display: flex; gap: 10px; margin-top: 1rem; }
+
+    .alerta-box {
+      background: var(--laranja-light);
+      border: 0.5px solid var(--laranja);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 1rem;
+      font-size: 13px;
+      color: #7c2d12;
+      line-height: 1.5;
+    }
+
+    .grupo-label {
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--texto-muted);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .rodape {
+      text-align: center;
+      font-size: 11px;
+      color: var(--borda-forte);
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 0.5px solid var(--borda);
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <div class="header">
+    <div class="logo-area">
+      <h1>FluxoPRO</h1>
+      <p>Organização financeira para empreendedores</p>
+    </div>
+    <div class="step-indicator">
+      <div class="step-dot active" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+      <div class="step-dot" id="dot3"></div>
+    </div>
+  </div>
+
+  <!-- PÁGINA 1 -->
+  <div class="page active" id="page1">
+    <div class="section-title">Etapa 1 — Seu negócio</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field-label">Tipo de atividade</div>
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="sel(this,'atividade','servico')">Serviços</button>
+          <button class="toggle-btn" onclick="sel(this,'atividade','comercio')">Comércio / Indústria</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Regime tributário</div>
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="sel(this,'regime','mei')">MEI</button>
+          <button class="toggle-btn" onclick="sel(this,'regime','simples')">Simples Nacional</button>
+          <button class="toggle-btn" onclick="sel(this,'regime','outro')">Outro</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Faturamento médio mensal</div>
+        <div class="input-wrap">
+          <span class="prefix-label">R$</span>
+          <input type="number" id="faturamento" placeholder="ex: 8000" min="0">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Custos fixos da empresa / mês</div>
+        <div class="input-wrap">
+          <span class="prefix-label">R$</span>
+          <input type="number" id="custosTotal" placeholder="ex: 2000" min="0">
+        </div>
+        <span class="custos-toggle" onclick="toggleCustos()">+ Detalhar por categoria</span>
+        <div class="custos-detalhe" id="custosDetalhe">
+          <div class="custos-item"><span class="cat-label">Aluguel</span><div class="input-wrap" style="flex:1"><span class="prefix-label">R$</span><input type="number" class="custo-cat" placeholder="0" min="0" oninput="somarCustos()"></div></div>
+          <div class="custos-item"><span class="cat-label">Internet / Tel</span><div class="input-wrap" style="flex:1"><span class="prefix-label">R$</span><input type="number" class="custo-cat" placeholder="0" min="0" oninput="somarCustos()"></div></div>
+          <div class="custos-item"><span class="cat-label">Ferramentas</span><div class="input-wrap" style="flex:1"><span class="prefix-label">R$</span><input type="number" class="custo-cat" placeholder="0" min="0" oninput="somarCustos()"></div></div>
+          <div class="custos-item"><span class="cat-label">Marketing</span><div class="input-wrap" style="flex:1"><span class="prefix-label">R$</span><input type="number" class="custo-cat" placeholder="0" min="0" oninput="somarCustos()"></div></div>
+          <div class="custos-item"><span class="cat-label">Outros</span><div class="input-wrap" style="flex:1"><span class="prefix-label">R$</span><input type="number" class="custo-cat" placeholder="0" min="0" oninput="somarCustos()"></div></div>
+        </div>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="irPara2()">Continuar →</button>
+  </div>
+
+  <!-- PÁGINA 2 -->
+  <div class="page" id="page2">
+    <div class="section-title">Etapa 2 — Sua vida pessoal</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field-label">Quanto precisa por mês para viver (essencial)</div>
+        <div class="input-wrap">
+          <span class="prefix-label">R$</span>
+          <input type="number" id="necessidades" placeholder="ex: 3000" min="0">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Tem dívidas?</div>
+        <div class="toggle-group">
+          <button class="toggle-btn" onclick="sel(this,'divida','nao');toggleDivida(false)">Não</button>
+          <button class="toggle-btn active" onclick="sel(this,'divida','sim');toggleDivida(true)">Sim</button>
+        </div>
+      </div>
+      <div class="field-row" id="camposDivida">
+        <div class="field-label">Valor total das dívidas</div>
+        <div class="input-wrap">
+          <span class="prefix-label">R$</span>
+          <input type="number" id="divida" placeholder="ex: 10000" min="0">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Reserva de emergência — quantos meses coberta?</div>
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="sel(this,'reserva','zero')">Nenhuma</button>
+          <button class="toggle-btn" onclick="sel(this,'reserva','1-3')">1–3 meses</button>
+          <button class="toggle-btn" onclick="sel(this,'reserva','4-6')">4–6 meses</button>
+          <button class="toggle-btn" onclick="sel(this,'reserva','6+')">6+ meses</button>
+        </div>
+      </div>
+    </div>
+    <div class="nav-row">
+      <button class="btn-secondary" onclick="irPara(1)">← Voltar</button>
+      <button class="btn-primary" style="margin-top:0" onclick="calcular()">Ver diagnóstico →</button>
+    </div>
+  </div>
+
+  <!-- PÁGINA 3 -->
+  <div class="page" id="page3">
+    <div class="section-title">Resultado — Divisão do seu dinheiro</div>
+
+    <div id="alertaBox" class="alerta-box" style="display:none"></div>
+
+    <div class="total-row">
+      <span class="total-label">Faturamento mensal</span>
+      <span class="total-valor" id="resTotal">—</span>
+    </div>
+
+    <div class="grupo-label">Empresa</div>
+
+    <div class="balde" style="background:#d1fae5;border:0.5px solid #6ee7b7">
+      <div class="balde-header">
+        <span class="balde-nome" style="color:#065f46">Operação &amp; Custos</span>
+        <span class="balde-valor" style="color:#065f46" id="resOperacao">—</span>
+      </div>
+      <div class="balde-pct" style="color:#059669" id="pctOperacao">—</div>
+      <div class="bar-track"><div class="bar-fill" id="barOperacao" style="background:#059669"></div></div>
+    </div>
+
+    <div class="balde" style="background:#fef3c7;border:0.5px solid #fcd34d">
+      <div class="balde-header">
+        <span class="balde-nome" style="color:#78350f">Reinvestimento</span>
+        <span class="balde-valor" style="color:#78350f" id="resReinvest">—</span>
+      </div>
+      <div class="balde-pct" style="color:#b45309" id="pctReinvest">—</div>
+      <div class="bar-track"><div class="bar-fill" id="barReinvest" style="background:#d97706"></div></div>
+    </div>
+
+    <div class="balde" style="background:#ffedd5;border:0.5px solid #fdba74">
+      <div class="balde-header">
+        <span class="balde-nome" style="color:#7c2d12">Reserva da empresa</span>
+        <span class="balde-valor" style="color:#7c2d12" id="resReservaEmp">—</span>
+      </div>
+      <div class="balde-pct" style="color:#c2410c" id="pctReservaEmp">—</div>
+      <div class="bar-track"><div class="bar-fill" id="barReservaEmp" style="background:#ea580c"></div></div>
+    </div>
+
+    <div class="divisor"></div>
+    <div class="grupo-label">Pró-labore → vida pessoal</div>
+
+    <div class="total-row" style="margin-bottom:8px">
+      <span class="total-label">Pró-labore sugerido</span>
+      <span class="total-valor" id="resProLabore">—</span>
+    </div>
+
+    <div class="balde" style="background:#f0fdf8;border:0.5px solid #a7f3d0">
+      <div class="balde-header">
+        <span class="balde-nome" style="color:#065f46">Necessidades pessoais</span>
+        <span class="balde-valor" style="color:#065f46" id="resNecessidades">—</span>
+      </div>
+      <div class="balde-pct" style="color:#059669" id="pctNecessidades">—</div>
+      <div class="bar-track"><div class="bar-fill" id="barNecessidades" style="background:#059669"></div></div>
+    </div>
+
+    <div class="balde" style="background:#fffbeb;border:0.5px solid #fde68a">
+      <div class="balde-header">
+        <span class="balde-nome" style="color:#78350f">Qualidade de vida</span>
+        <span class="balde-valor" style="color:#78350f" id="resQualidade">—</span>
+      </div>
+      <div class="balde-pct" style="color:#b45309" id="pctQualidade">—</div>
+      <div class="bar-track"><div class="bar-fill" id="barQualidade" style="background:#d97706"></div></div>
+    </div>
+
+    <div class="balde" style="background:#fff7ed;border:0.5px solid #fed7aa">
+      <div class="balde-header">
+        <span class="balde-nome" style="color:#7c2d12">Investimento pessoal</span>
+        <span class="balde-valor" style="color:#7c2d12" id="resInvestPessoal">—</span>
+      </div>
+      <div class="balde-pct" style="color:#c2410c" id="pctInvestPessoal">—</div>
+      <div class="bar-track"><div class="bar-fill" id="barInvestPessoal" style="background:#ea580c"></div></div>
+    </div>
+
+    <div class="divisor"></div>
+
+    <div class="section-title" style="margin-top:0">Diagnóstico de saúde financeira</div>
+    <div class="card"><div id="diagnostico"></div></div>
+
+    <div class="section-title">Recomendações de ação</div>
+    <div class="card"><div id="recomendacoes"></div></div>
+
+    <button class="btn-secondary" style="width:100%;margin-top:0.5rem;text-align:center" onclick="irPara(1)">← Recalcular</button>
+
+    <div class="rodape">FluxoPRO · Baseado no método 50-30-20 adaptado para empreendedores</div>
+  </div>
+
+</div>
+
+<script>
+  const d = { atividade:'servico', regime:'mei', divida:'sim', reserva:'zero' };
+
+  function sel(btn, grupo, valor) {
+    d[grupo] = valor;
+    btn.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function toggleDivida(show) {
+    document.getElementById('camposDivida').style.display = show ? 'block' : 'none';
+  }
+
+  function toggleCustos() {
+    const el = document.getElementById('custosDetalhe');
+    const toggle = document.querySelector('.custos-toggle');
+    el.classList.toggle('show');
+    toggle.textContent = el.classList.contains('show') ? '− Ocultar categorias' : '+ Detalhar por categoria';
+  }
+
+  function somarCustos() {
+    let t = 0;
+    document.querySelectorAll('.custo-cat').forEach(c => t += parseFloat(c.value)||0);
+    document.getElementById('custosTotal').value = t;
+  }
+
+  function irPara(n) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page'+n).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    ['dot1','dot2','dot3'].forEach((id,i) => {
+      const dot = document.getElementById(id);
+      dot.classList.remove('active','done');
+      if (i+1 < n) dot.classList.add('done');
+      else if (i+1 === n) dot.classList.add('active');
+    });
+  }
+
+  function irPara2() {
+    const fat = parseFloat(document.getElementById('faturamento').value)||0;
+    if (fat <= 0) { alert('Informe o faturamento médio mensal.'); return; }
+    irPara(2);
+  }
+
+  function fmt(v) { return 'R$ ' + Math.round(v).toLocaleString('pt-BR'); }
+  function pct(v,t) { return t > 0 ? Math.round((v/t)*100)+'%' : '0%'; }
+
+  function calcular() {
+    const fat = parseFloat(document.getElementById('faturamento').value)||0;
+    const custosFixos = parseFloat(document.getElementById('custosTotal').value)||0;
+    const necessidades = parseFloat(document.getElementById('necessidades').value)||0;
+    const dividaVal = parseFloat(document.getElementById('divida').value)||0;
+
+    const aliq = d.regime==='mei' ? 0.05 : d.regime==='simples' ? 0.08 : 0.12;
+    const impostos = fat * aliq;
+    const liquida = fat - impostos;
+    const disponivel = liquida - custosFixos;
+
+    const operacaoTotal = custosFixos + impostos;
+    const reinvest   = disponivel > 0 ? disponivel * 0.30 : 0;
+    const reservaEmp = disponivel > 0 ? disponivel * 0.20 : 0;
+    const proLabore  = disponivel > 0 ? disponivel * 0.50 : 0;
+
+    const sobra = proLabore - necessidades;
+    let investP, qualidade;
+    if (d.divida==='sim' && dividaVal > 0 && sobra > 0) {
+      investP = sobra * 0.60; qualidade = sobra * 0.40;
+    } else if (d.reserva==='zero' || d.reserva==='1-3') {
+      investP = sobra > 0 ? sobra * 0.55 : 0; qualidade = sobra > 0 ? sobra * 0.45 : 0;
+    } else {
+      investP = sobra > 0 ? sobra * 0.35 : 0; qualidade = sobra > 0 ? sobra * 0.65 : 0;
+    }
+
+    const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    const bar = (id, v, t) => { const el = document.getElementById(id); if(el) el.style.width = pct(v,t); };
+
+    set('resTotal', fmt(fat));
+    set('resOperacao', fmt(operacaoTotal));
+    set('pctOperacao', pct(operacaoTotal,fat) + ' do faturamento (impostos: '+fmt(impostos)+')');
+    bar('barOperacao', operacaoTotal, fat);
+    set('resReinvest', fmt(reinvest));
+    set('pctReinvest', pct(reinvest,fat) + ' do faturamento');
+    bar('barReinvest', reinvest, fat);
+    set('resReservaEmp', fmt(reservaEmp));
+    set('pctReservaEmp', pct(reservaEmp,fat) + ' do faturamento');
+    bar('barReservaEmp', reservaEmp, fat);
+    set('resProLabore', fmt(proLabore));
+    set('resNecessidades', fmt(necessidades));
+    set('pctNecessidades', pct(necessidades,proLabore) + ' do pró-labore');
+    bar('barNecessidades', necessidades, proLabore);
+    set('resQualidade', fmt(qualidade));
+    set('pctQualidade', pct(qualidade,proLabore) + ' do pró-labore');
+    bar('barQualidade', qualidade, proLabore);
+    set('resInvestPessoal', fmt(investP));
+    set('pctInvestPessoal', pct(investP,proLabore) + ' do pró-labore');
+    bar('barInvestPessoal', investP, proLabore);
+
+    const alerta = document.getElementById('alertaBox');
+    if (disponivel <= 0) {
+      alerta.style.display = 'block';
+      alerta.textContent = 'Atenção: seus custos consomem toda a receita líquida. O pró-labore é zero. Revise urgentemente seus gastos ou aumente o faturamento.';
+    } else if (proLabore < necessidades) {
+      alerta.style.display = 'block';
+      alerta.textContent = 'Atenção: o pró-labore sugerido ('+fmt(proLabore)+') é menor que suas necessidades pessoais ('+fmt(necessidades)+'). Você precisa crescer o faturamento ou reduzir custos.';
+    } else { alerta.style.display = 'none'; }
+
+    const sOp  = (operacaoTotal/fat) < 0.6 ? 'verde' : (operacaoTotal/fat) < 0.8 ? 'amarelo' : 'vermelho';
+    const sPro = proLabore >= necessidades ? 'verde' : proLabore >= necessidades*0.8 ? 'amarelo' : 'vermelho';
+    const sRes = d.reserva==='6+' ? 'verde' : d.reserva==='4-6' ? 'amarelo' : 'vermelho';
+    const sInv = investP > 0 ? 'verde' : 'vermelho';
+
+    const corSem = { verde:'#059669', amarelo:'#d97706', vermelho:'#ea580c' };
+    const txtSem = { verde:'Saudável', amarelo:'Atenção', vermelho:'Crítico' };
+
+    function sem(cor, texto) {
+      return `<div class="semaforo-item">
+        <div class="semaforo-dot" style="background:${corSem[cor]}"></div>
+        <span class="semaforo-texto">${texto}</span>
+        <span class="semaforo-status" style="color:${corSem[cor]}">${txtSem[cor]}</span>
+      </div>`;
+    }
+
+    document.getElementById('diagnostico').innerHTML =
+      sem(sOp,  'Custo operacional em relação ao faturamento') +
+      sem(sPro, 'Pró-labore cobre suas necessidades pessoais') +
+      sem(sRes, 'Reserva de emergência pessoal') +
+      sem(sInv, 'Capacidade de investir mensalmente');
+
+    const recs = [];
+    if (sOp === 'vermelho') recs.push({ t:'Reduza custos fixos urgentemente', s:'Seus custos consomem mais de 80% do faturamento. Meta: chegar a no máximo 50–60%.' });
+    else if (sOp === 'amarelo') recs.push({ t:'Monitore seus custos fixos', s:'Estão em nível de atenção. Revise contratos e ferramentas que não geram retorno direto.' });
+    if (sRes === 'vermelho') recs.push({ t:'Construa sua reserva pessoal primeiro', s:'Meta mínima: 3 meses de necessidades ('+fmt(necessidades*3)+'). Priorize isso antes de investir.' });
+    if (d.divida==='sim' && dividaVal>0) {
+      const meses = investP > 0 ? Math.ceil(dividaVal/investP) : '—';
+      recs.push({ t:'Priorize a quitação das dívidas', s:'Com '+fmt(investP)+'/mês destinados, você quita em aprox. '+meses+' meses. Comece pelas de maior juros.' });
+    }
+    if (proLabore > 0 && proLabore < necessidades*1.2) recs.push({ t:'Defina uma meta de crescimento', s:'Para ter folga no pró-labore, você precisa faturar pelo menos '+fmt(fat*1.3)+'/mês.' });
+    if (reinvest > 0) recs.push({ t:'Use o reinvestimento com critério', s:fmt(reinvest)+'/mês disponíveis para crescer. Priorize: presença digital, ferramentas e capacitação.' });
+
+    document.getElementById('recomendacoes').innerHTML = recs.slice(0,4).map((r,i) =>
+      `<div class="rec-item">
+        <span class="rec-num">0${i+1}</span>
+        <div>
+          <div class="rec-titulo">${r.t}</div>
+          <div class="rec-detalhe">${r.s}</div>
+        </div>
+      </div>`
+    ).join('') || `<p style="font-size:13px;color:var(--texto-muted)">Parabéns — sua estrutura financeira está bem organizada.</p>`;
+
+    irPara(3);
+  }
+
+  toggleDivida(true);
+</script>
+</body>
+</html>
