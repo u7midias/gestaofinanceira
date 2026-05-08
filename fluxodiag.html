@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FluxoDIAG — Diagnóstico Financeiro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --verde: #059669;
+      --verde-light: #d1fae5;
+      --verde-mid: #10b981;
+      --ouro: #d97706;
+      --ouro-light: #fef3c7;
+      --laranja: #ea580c;
+      --laranja-light: #ffedd5;
+      --vermelho: #dc2626;
+      --vermelho-light: #fee2e2;
+      --preto: #111111;
+      --fundo: #f8f7f4;
+      --fundo-card: #ffffff;
+      --fundo-input: #f1f0ec;
+      --borda: #e0ddd6;
+      --borda-forte: #c8c4bc;
+      --texto: #1a1814;
+      --texto-muted: #6b6560;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #eeece8;
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    #app {
+      background: var(--fundo);
+      color: var(--texto);
+      width: 100%;
+      max-width: 560px;
+      border-radius: 20px;
+      padding: 2rem 1.75rem;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 0.5px solid var(--borda);
+    }
+
+    .logo-area h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--preto);
+      letter-spacing: -0.5px;
+    }
+
+    .logo-area h1 span { color: var(--ouro); }
+    .logo-area p { font-size: 12px; color: var(--texto-muted); margin-top: 3px; font-weight: 400; }
+
+    .step-indicator { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--borda-forte); transition: background 0.3s; }
+    .step-dot.active { background: var(--ouro); }
+    .step-dot.done { background: var(--verde); }
+
+    .section-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--ouro);
+      margin-bottom: 1rem;
+    }
+
+    .mes-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--ouro-light);
+      border: 0.5px solid #fcd34d;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #78350f;
+      margin-bottom: 1.25rem;
+    }
+
+    .card {
+      background: var(--fundo-card);
+      border: 0.5px solid var(--borda);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .field-label { font-size: 12px; color: var(--texto-muted); margin-bottom: 6px; font-weight: 500; }
+    .field-row { margin-bottom: 1.1rem; }
+    .field-row:last-child { margin-bottom: 0; }
+
+    .toggle-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .toggle-btn {
+      background: var(--fundo-input);
+      border: 0.5px solid var(--borda-forte);
+      color: var(--texto);
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn:hover { background: #e8e5de; border-color: #aaa; }
+    .toggle-btn.active { background: var(--preto); border-color: var(--preto); color: #fff; }
+
+    /* Lista de itens (entradas/saídas) */
+    .itens-lista { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+
+    .item-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .item-desc {
+      flex: 1;
+      background: var(--fundo-card);
+      border: 0.5px solid var(--borda-forte);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-family: 'Montserrat', sans-serif;
+      color: var(--texto);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .item-desc:focus { border-color: var(--ouro); }
+    .item-desc::placeholder { color: var(--borda-forte); }
+
+    .item-valor-wrap {
+      display: flex;
+      align-items: center;
+      background: var(--fundo-card);
+      border: 0.5px solid var(--borda-forte);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+      min-width: 130px;
+    }
+
+    .item-valor-wrap:focus-within { border-color: var(--ouro); }
+
+    .item-prefix {
+      padding: 8px 8px;
+      font-size: 12px;
+      color: var(--texto-muted);
+      background: var(--fundo-input);
+      border-right: 0.5px solid var(--borda);
+      white-space: nowrap;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    .item-valor-wrap input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--texto);
+      padding: 8px 8px;
+      font-size: 13px;
+      font-family: 'Montserrat', sans-serif;
+      width: 80px;
+    }
+
+    .item-valor-wrap input::placeholder { color: var(--borda-forte); }
+
+    .btn-remover {
+      background: none;
+      border: none;
+      color: var(--borda-forte);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 4px;
+      transition: color 0.2s;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    .btn-remover:hover { color: var(--vermelho); }
+
+    .btn-adicionar {
+      background: var(--fundo-input);
+      border: 0.5px dashed var(--borda-forte);
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 12px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      color: var(--texto-muted);
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      transition: all 0.2s;
+    }
+
+    .btn-adicionar:hover { background: #e8e5de; color: var(--texto); border-color: #aaa; }
+
+    /* Compartilhado */
+    .compartilhado-extra {
+      display: none;
+      margin-top: 8px;
+      padding: 10px 12px;
+      background: var(--ouro-light);
+      border-radius: 8px;
+      border: 0.5px solid #fcd34d;
+    }
+
+    .compartilhado-extra.show { display: block; }
+
+    .pct-label { font-size: 12px; color: #78350f; margin-bottom: 6px; font-weight: 500; }
+
+    .pct-row { display: flex; align-items: center; gap: 8px; }
+
+    .pct-row input[type=range] {
+      flex: 1;
+      accent-color: var(--ouro);
+    }
+
+    .pct-valor {
+      font-size: 13px;
+      font-weight: 700;
+      color: #78350f;
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* Inputs de mês */
+    .input-wrap {
+      display: flex;
+      align-items: center;
+      background: var(--fundo-card);
+      border: 0.5px solid var(--borda-forte);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .input-wrap:focus-within { border-color: var(--ouro); }
+
+    .prefix-label {
+      padding: 9px 12px;
+      font-size: 12px;
+      color: var(--texto-muted);
+      background: var(--fundo-input);
+      border-right: 0.5px solid var(--borda);
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    .input-wrap select {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--texto);
+      padding: 9px 12px;
+      font-size: 13px;
+      font-family: 'Montserrat', sans-serif;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: var(--preto);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: opacity 0.2s, transform 0.1s;
+      margin-top: 1rem;
+    }
+
+    .btn-primary:hover { opacity: 0.82; }
+    .btn-primary:active { transform: scale(0.99); }
+
+    .btn-secondary {
+      background: transparent;
+      border: 0.5px solid var(--borda-forte);
+      color: var(--texto-muted);
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover { border-color: var(--preto); color: var(--texto); }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .nav-row { display: flex; gap: 10px; margin-top: 1rem; }
+
+    /* RESULTADO */
+    .resultado-saldo {
+      border-radius: 14px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      text-align: center;
+    }
+
+    .saldo-label { font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+    .saldo-valor { font-size: 36px; font-weight: 800; font-family: 'Montserrat', sans-serif; }
+    .saldo-sub { font-size: 13px; margin-top: 6px; opacity: 0.8; }
+
+    .bloco-titulo {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--texto-muted);
+      margin-bottom: 8px;
+    }
+
+    .linha-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 0.5px solid var(--borda);
+      font-size: 13px;
+    }
+
+    .linha-item:last-child { border-bottom: none; }
+    .linha-desc { color: var(--texto); flex: 1; }
+    .linha-cat { font-size: 10px; color: var(--texto-muted); margin-top: 1px; }
+    .linha-val { font-weight: 600; font-family: 'Montserrat', sans-serif; white-space: nowrap; margin-left: 12px; }
+
+    .totais-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .totais-card {
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .totais-card .t-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .totais-card .t-valor { font-size: 20px; font-weight: 800; font-family: 'Montserrat', sans-serif; }
+    .totais-card .t-sub { font-size: 11px; margin-top: 4px; opacity: 0.75; }
+
+    .alerta-box {
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 1rem;
+      font-size: 13px;
+      line-height: 1.5;
+      font-weight: 500;
+    }
+
+    .insight-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 0.5px solid var(--borda);
+      align-items: flex-start;
+    }
+
+    .insight-item:last-child { border-bottom: none; }
+
+    .insight-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+      font-weight: 700;
+    }
+
+    .insight-titulo { font-size: 13px; font-weight: 600; color: var(--texto); }
+    .insight-detalhe { font-size: 12px; color: var(--texto-muted); margin-top: 3px; line-height: 1.5; }
+
+    .divisor { height: 0.5px; background: var(--borda); margin: 1.25rem 0; }
+
+    .rodape {
+      text-align: center;
+      font-size: 11px;
+      color: var(--borda-forte);
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-bottom: 0.5px solid var(--borda);
+    }
+
+    .tag-empresa { background: var(--verde-light); color: #065f46; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+    .tag-pessoal { background: var(--ouro-light); color: #78350f; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+    .tag-comp { background: #ede9fe; color: #4c1d95; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <div class="header">
+    <div class="logo-area">
+      <h1>Fluxo<span>DIAG</span></h1>
+      <p>Diagnóstico financeiro do seu negócio</p>
+    </div>
+    <div class="step-indicator">
+      <div class="step-dot active" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+      <div class="step-dot" id="dot3"></div>
+      <div class="step-dot" id="dot4"></div>
+    </div>
+  </div>
+
+  <!-- PÁGINA 1: MÊS DE REFERÊNCIA -->
+  <div class="page active" id="page1">
+    <div class="section-title">Passo 1 — Mês de referência</div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field-label">Qual mês você quer analisar?</div>
+        <div class="input-wrap">
+          <span class="prefix-label">Mês</span>
+          <select id="mesSel">
+            <option value="Janeiro">Janeiro</option>
+            <option value="Fevereiro">Fevereiro</option>
+            <option value="Março">Março</option>
+            <option value="Abril">Abril</option>
+            <option value="Maio">Maio</option>
+            <option value="Junho">Junho</option>
+            <option value="Julho">Julho</option>
+            <option value="Agosto">Agosto</option>
+            <option value="Setembro">Setembro</option>
+            <option value="Outubro">Outubro</option>
+            <option value="Novembro">Novembro</option>
+            <option value="Dezembro">Dezembro</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="input-wrap">
+          <span class="prefix-label">Ano</span>
+          <select id="anoSel">
+            <option value="2024">2024</option>
+            <option value="2025" selected>2025</option>
+            <option value="2026">2026</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Tipo de negócio</div>
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="sel(this,'atividade','servico')">Serviços</button>
+          <button class="toggle-btn" onclick="sel(this,'atividade','comercio')">Comércio / Indústria</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Regime tributário</div>
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="sel(this,'regime','mei')">MEI</button>
+          <button class="toggle-btn" onclick="sel(this,'regime','simples')">Simples Nacional</button>
+          <button class="toggle-btn" onclick="sel(this,'regime','outro')">Outro</button>
+        </div>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="irPara(2)">Continuar →</button>
+  </div>
+
+  <!-- PÁGINA 2: ENTRADAS -->
+  <div class="page" id="page2">
+    <div class="section-title">Passo 2 — O que entrou</div>
+    <div class="mes-badge" id="mesBadge2">📅 —</div>
+    <p style="font-size:13px;color:var(--texto-muted);margin-bottom:1rem;line-height:1.6">Liste tudo que você recebeu neste mês — clientes, freelas, vendas, qualquer fonte de renda do negócio.</p>
+    <div class="card">
+      <div class="itens-lista" id="listaEntradas"></div>
+      <button class="btn-adicionar" onclick="adicionarItem('entradas')">+ Adicionar entrada</button>
+    </div>
+    <div class="nav-row">
+      <button class="btn-secondary" onclick="irPara(1)">← Voltar</button>
+      <button class="btn-primary" style="margin-top:0" onclick="irParaSaidas()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- PÁGINA 3: SAÍDAS -->
+  <div class="page" id="page3">
+    <div class="section-title">Passo 3 — O que saiu</div>
+    <div class="mes-badge" id="mesBadge3">📅 —</div>
+    <p style="font-size:13px;color:var(--texto-muted);margin-bottom:1rem;line-height:1.6">Liste tudo que você pagou neste mês. Não precisa categorizar agora — só diga se foi do <strong>negócio</strong>, da sua <strong>vida pessoal</strong>, ou <strong>dos dois</strong>.</p>
+
+    <!-- EMPRESA -->
+    <div class="section-title" style="margin-bottom:8px">Gastos do negócio</div>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="itens-lista" id="listaNegocio"></div>
+      <button class="btn-adicionar" onclick="adicionarItem('negocio')">+ Adicionar gasto do negócio</button>
+    </div>
+
+    <!-- PESSOAL -->
+    <div class="section-title" style="margin-bottom:8px">Gastos pessoais</div>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="itens-lista" id="listaPessoal"></div>
+      <button class="btn-adicionar" onclick="adicionarItem('pessoal')">+ Adicionar gasto pessoal</button>
+    </div>
+
+    <!-- COMPARTILHADO -->
+    <div class="section-title" style="margin-bottom:8px">Gastos dos dois (compartilhados)</div>
+    <p style="font-size:12px;color:var(--texto-muted);margin-bottom:10px">Ex: celular, internet, combustível, energia. Você define quanto % é do negócio.</p>
+    <div class="card">
+      <div class="itens-lista" id="listaComp"></div>
+      <button class="btn-adicionar" onclick="adicionarItemComp()">+ Adicionar gasto compartilhado</button>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn-secondary" onclick="irPara(2)">← Voltar</button>
+      <button class="btn-primary" style="margin-top:0" onclick="calcular()">Ver diagnóstico →</button>
+    </div>
+  </div>
+
+  <!-- PÁGINA 4: DIAGNÓSTICO -->
+  <div class="page" id="page4">
+    <div class="section-title">Diagnóstico — <span id="mesResultado">—</span></div>
+
+    <div id="saldoBox" class="resultado-saldo"></div>
+
+    <div class="totais-grid">
+      <div class="totais-card" style="background:var(--verde-light)">
+        <div class="t-label" style="color:#065f46">Total que entrou</div>
+        <div class="t-valor" style="color:#065f46" id="totalEntrou">—</div>
+        <div class="t-sub" style="color:#059669" id="subEntrou">—</div>
+      </div>
+      <div class="totais-card" style="background:var(--laranja-light)">
+        <div class="t-label" style="color:#7c2d12">Total que saiu</div>
+        <div class="t-valor" style="color:#7c2d12" id="totalSaiu">—</div>
+        <div class="t-sub" style="color:#c2410c" id="subSaiu">—</div>
+      </div>
+    </div>
+
+    <div id="alertaDiag" class="alerta-box" style="display:none"></div>
+
+    <!-- Breakdown empresa -->
+    <div class="card" style="margin-bottom:1rem">
+      <div class="bloco-titulo" style="color:#065f46">Negócio</div>
+      <div id="breakNegocio"></div>
+      <div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:4px;border-top:0.5px solid var(--borda)">
+        <span style="font-size:13px;font-weight:600;color:var(--texto)">Total negócio</span>
+        <span style="font-size:13px;font-weight:700;color:var(--laranja)" id="totalNegocio">—</span>
+      </div>
+    </div>
+
+    <!-- Breakdown pessoal -->
+    <div class="card" style="margin-bottom:1rem">
+      <div class="bloco-titulo" style="color:#78350f">Vida pessoal</div>
+      <div id="breakPessoal"></div>
+      <div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:4px;border-top:0.5px solid var(--borda)">
+        <span style="font-size:13px;font-weight:600;color:var(--texto)">Total pessoal</span>
+        <span style="font-size:13px;font-weight:700;color:var(--laranja)" id="totalPessoalRes">—</span>
+      </div>
+    </div>
+
+    <!-- Impostos -->
+    <div class="card" style="margin-bottom:1.25rem">
+      <div class="bloco-titulo">Impostos estimados</div>
+      <div class="linha-item">
+        <div><div class="linha-desc">Imposto sobre faturamento</div><div class="linha-cat" id="catImposto">—</div></div>
+        <span class="linha-val" style="color:var(--laranja)" id="valorImposto">—</span>
+      </div>
+    </div>
+
+    <div class="divisor"></div>
+
+    <!-- Insights -->
+    <div class="section-title" style="margin-top:0">Pontos de atenção</div>
+    <div class="card">
+      <div id="insights"></div>
+    </div>
+
+    <div style="background:var(--ouro-light);border:0.5px solid #fcd34d;border-radius:10px;padding:14px;margin-bottom:1rem;font-size:13px;color:#78350f;line-height:1.6">
+      <strong>Próximo passo:</strong> agora que você enxergou seu cenário real, use o <strong>FluxoPRO</strong> para organizar como seu dinheiro deveria ser dividido todo mês.
+    </div>
+
+    <button class="btn-secondary" style="width:100%;text-align:center" onclick="irPara(1)">← Analisar outro mês</button>
+
+    <div class="rodape">FluxoDIAG · Diagnóstico baseado nos dados reais do seu mês</div>
+  </div>
+
+</div>
+
+<script>
+  const d = { atividade: 'servico', regime: 'mei' };
+  let contadorId = 0;
+
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  // Pré-seleciona mês atual
+  const agora = new Date();
+  document.getElementById('mesSel').value = meses[agora.getMonth()];
+
+  function sel(btn, grupo, valor) {
+    d[grupo] = valor;
+    btn.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function getMes() {
+    return document.getElementById('mesSel').value + ' / ' + document.getElementById('anoSel').value;
+  }
+
+  function irPara(n) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page' + n).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    ['dot1','dot2','dot3','dot4'].forEach((id, i) => {
+      const dot = document.getElementById(id);
+      dot.classList.remove('active','done');
+      if (i + 1 < n) dot.classList.add('done');
+      else if (i + 1 === n) dot.classList.add('active');
+    });
+  }
+
+  function irParaSaidas() {
+    const entradas = getItens('entradas');
+    if (entradas.length === 0 || entradas.every(e => !e.valor)) {
+      alert('Adicione pelo menos uma entrada antes de continuar.'); return;
+    }
+    const totalE = entradas.reduce((s, e) => s + (e.valor||0), 0);
+    if (totalE <= 0) { alert('Informe o valor de pelo menos uma entrada.'); return; }
+    irPara(3);
+  }
+
+  function adicionarItem(lista) {
+    const id = ++contadorId;
+    const container = document.getElementById('lista' + capitalize(lista));
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.id = 'item-' + id;
+    row.dataset.lista = lista;
+    row.innerHTML = `
+      <input class="item-desc" type="text" placeholder="${placeholderPara(lista)}" data-id="${id}">
+      <div class="item-valor-wrap">
+        <span class="item-prefix">R$</span>
+        <input type="number" min="0" placeholder="0" data-id="${id}" class="item-val">
+      </div>
+      <button class="btn-remover" onclick="removerItem(${id})">×</button>
+    `;
+    container.appendChild(row);
+  }
+
+  function adicionarItemComp() {
+    const id = ++contadorId;
+    const container = document.getElementById('listaComp');
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.id = 'item-' + id;
+    row.dataset.lista = 'comp';
+    row.style.flexWrap = 'wrap';
+    row.innerHTML = `
+      <input class="item-desc" type="text" placeholder="ex: Internet, celular, combustível" data-id="${id}" style="min-width:150px">
+      <div class="item-valor-wrap">
+        <span class="item-prefix">R$</span>
+        <input type="number" min="0" placeholder="0" data-id="${id}" class="item-val">
+      </div>
+      <button class="btn-remover" onclick="removerItem(${id})">×</button>
+      <div class="compartilhado-extra show" style="width:100%" id="comp-extra-${id}">
+        <div class="pct-label">Quanto % é do negócio?</div>
+        <div class="pct-row">
+          <input type="range" min="0" max="100" value="50" step="5"
+            oninput="document.getElementById('pct-val-${id}').textContent=this.value+'%'"
+            class="item-pct" data-id="${id}">
+          <span class="pct-valor" id="pct-val-${id}">50%</span>
+        </div>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+
+  function removerItem(id) {
+    const el = document.getElementById('item-' + id);
+    if (el) el.remove();
+  }
+
+  function getItens(lista) {
+    const rows = document.querySelectorAll(`[data-lista="${lista}"]`);
+    return Array.from(rows).map(row => {
+      const desc = row.querySelector('.item-desc')?.value || '';
+      const val = parseFloat(row.querySelector('.item-val')?.value) || 0;
+      const pct = lista === 'comp' ? (parseFloat(row.querySelector('.item-pct')?.value) || 50) / 100 : 1;
+      return { desc, valor: val, pct };
+    }).filter(i => i.valor > 0 || i.desc);
+  }
+
+  function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  function placeholderPara(lista) {
+    if (lista === 'entradas') return 'ex: Cliente João, Venda online...';
+    if (lista === 'negocio') return 'ex: Aluguel, ferramentas, marketing...';
+    if (lista === 'pessoal') return 'ex: Aluguel casa, mercado, academia...';
+    return 'ex: Internet, celular...';
+  }
+
+  function fmt(v) { return 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR'); }
+  function fmtS(v) { return (v < 0 ? '- ' : '') + fmt(v); }
+  function pct(v, t) { return t > 0 ? Math.round((v / t) * 100) + '%' : '0%'; }
+
+  function calcular() {
+    const mes = getMes();
+    document.getElementById('mesResultado').textContent = mes;
+    document.getElementById('mesBadge2').textContent = '📅 ' + mes;
+    document.getElementById('mesBadge3').textContent = '📅 ' + mes;
+
+    const entradas = getItens('entradas');
+    const negocio  = getItens('negocio');
+    const pessoal  = getItens('pessoal');
+    const comp     = getItens('comp');
+
+    const totalEntradas = entradas.reduce((s, e) => s + e.valor, 0);
+
+    // Compartilhados: dividir entre empresa e pessoal
+    let compEmpresa = 0, compPessoal = 0;
+    comp.forEach(c => {
+      compEmpresa += c.valor * c.pct;
+      compPessoal += c.valor * (1 - c.pct);
+    });
+
+    const aliq = d.regime === 'mei' ? 0.05 : d.regime === 'simples' ? 0.08 : 0.12;
+    const impostos = totalEntradas * aliq;
+
+    const totalNegocio = negocio.reduce((s, e) => s + e.valor, 0) + compEmpresa + impostos;
+    const totalPessoal = pessoal.reduce((s, e) => s + e.valor, 0) + compPessoal;
+    const totalSaiu = totalNegocio + totalPessoal;
+    const saldo = totalEntradas - totalSaiu;
+
+    // Saldo box
+    const saldoBox = document.getElementById('saldoBox');
+    if (saldo >= 0) {
+      saldoBox.style.background = '#d1fae5';
+      saldoBox.style.border = '0.5px solid #6ee7b7';
+      saldoBox.innerHTML = `
+        <div class="saldo-label" style="color:#065f46">Sobrou no mês</div>
+        <div class="saldo-valor" style="color:#065f46">${fmt(saldo)}</div>
+        <div class="saldo-sub" style="color:#059669">Você terminou o mês no positivo</div>`;
+    } else {
+      saldoBox.style.background = '#fee2e2';
+      saldoBox.style.border = '0.5px solid #fca5a5';
+      saldoBox.innerHTML = `
+        <div class="saldo-label" style="color:#7f1d1d">Faltou no mês</div>
+        <div class="saldo-valor" style="color:#7f1d1d">${fmt(saldo)}</div>
+        <div class="saldo-sub" style="color:#b91c1c">Você gastou mais do que ganhou</div>`;
+    }
+
+    // Totais cards
+    document.getElementById('totalEntrou').textContent = fmt(totalEntradas);
+    document.getElementById('subEntrou').textContent = entradas.length + ' fonte(s) de renda';
+    document.getElementById('totalSaiu').textContent = fmt(totalSaiu);
+    document.getElementById('subSaiu').textContent = 'empresa + pessoal + impostos';
+
+    // Alerta
+    const alertaDiag = document.getElementById('alertaDiag');
+    if (saldo < 0) {
+      alertaDiag.style.display = 'block';
+      alertaDiag.style.background = '#fee2e2';
+      alertaDiag.style.border = '0.5px solid #fca5a5';
+      alertaDiag.style.color = '#7f1d1d';
+      alertaDiag.innerHTML = `<strong>Atenção:</strong> seus gastos superaram suas receitas em ${fmt(Math.abs(saldo))} este mês. Isso significa que você usou reservas ou crédito para cobrir a diferença.`;
+    } else if (saldo < totalEntradas * 0.1) {
+      alertaDiag.style.display = 'block';
+      alertaDiag.style.background = var_ouro_light();
+      alertaDiag.style.border = '0.5px solid #fcd34d';
+      alertaDiag.style.color = '#78350f';
+      alertaDiag.innerHTML = `<strong>Atenção:</strong> você terminou o mês no positivo, mas a margem é pequena (${pct(saldo, totalEntradas)}). Qualquer imprevisto pode te deixar no negativo.`;
+    } else {
+      alertaDiag.style.display = 'none';
+    }
+
+    // Breakdown negócio
+    let htmlNeg = '';
+    negocio.forEach(i => {
+      htmlNeg += `<div class="linha-item"><div><div class="linha-desc">${i.desc||'—'}</div><span class="tag-empresa">Negócio</span></div><span class="linha-val" style="color:var(--laranja)">${fmt(i.valor)}</span></div>`;
+    });
+    comp.forEach(i => {
+      const vEmp = i.valor * i.pct;
+      if (vEmp > 0) htmlNeg += `<div class="linha-item"><div><div class="linha-desc">${i.desc||'—'}</div><span class="tag-comp">Compartilhado (${Math.round(i.pct*100)}% negócio)</span></div><span class="linha-val" style="color:var(--laranja)">${fmt(vEmp)}</span></div>`;
+    });
+    htmlNeg += `<div class="linha-item"><div><div class="linha-desc">Impostos estimados</div><div class="linha-cat">${regimeLabel()} — ${pct(impostos, totalEntradas)} do faturamento</div></div><span class="linha-val" style="color:var(--laranja)">${fmt(impostos)}</span></div>`;
+    document.getElementById('breakNegocio').innerHTML = htmlNeg || '<p style="font-size:13px;color:var(--texto-muted);padding:8px 0">Nenhum gasto do negócio registrado.</p>';
+    document.getElementById('totalNegocio').textContent = fmt(totalNegocio);
+
+    // Breakdown pessoal
+    let htmlPes = '';
+    pessoal.forEach(i => {
+      htmlPes += `<div class="linha-item"><div><div class="linha-desc">${i.desc||'—'}</div><span class="tag-pessoal">Pessoal</span></div><span class="linha-val" style="color:var(--laranja)">${fmt(i.valor)}</span></div>`;
+    });
+    comp.forEach(i => {
+      const vPes = i.valor * (1 - i.pct);
+      if (vPes > 0) htmlPes += `<div class="linha-item"><div><div class="linha-desc">${i.desc||'—'}</div><span class="tag-comp">Compartilhado (${Math.round((1-i.pct)*100)}% pessoal)</span></div><span class="linha-val" style="color:var(--laranja)">${fmt(vPes)}</span></div>`;
+    });
+    document.getElementById('breakPessoal').innerHTML = htmlPes || '<p style="font-size:13px;color:var(--texto-muted);padding:8px 0">Nenhum gasto pessoal registrado.</p>';
+    document.getElementById('totalPessoalRes').textContent = fmt(totalPessoal);
+
+    // Impostos
+    document.getElementById('catImposto').textContent = regimeLabel() + ' sobre R$ ' + Math.round(totalEntradas).toLocaleString('pt-BR');
+    document.getElementById('valorImposto').textContent = fmt(impostos);
+
+    // Insights
+    const insights = [];
+    const pctNeg = totalNegocio / totalEntradas;
+    const pctPes = totalPessoal / totalEntradas;
+
+    if (pctNeg > 0.6) insights.push({ cor: '#dc2626', bg: '#fee2e2', icone: '!', titulo: 'Custo do negócio muito alto', texto: `Seus gastos empresariais consomem ${pct(totalNegocio - impostos, totalEntradas)} do faturamento (sem contar impostos). O ideal é ficar abaixo de 50%.` });
+    if (pctPes > 0.5) insights.push({ cor: '#ea580c', bg: '#ffedd5', icone: '!', titulo: 'Gastos pessoais acima da metade da receita', texto: `Sua vida pessoal consome ${pct(totalPessoal, totalEntradas)} do que você fatura. Isso limita muito a capacidade de reinvestir no negócio.` });
+    if (saldo >= 0 && saldo < totalEntradas * 0.2) insights.push({ cor: '#d97706', bg: '#fef3c7', icone: 'i', titulo: 'Margem de sobra baixa', texto: `Você guardou apenas ${pct(saldo, totalEntradas)} do faturamento. O ideal para um negócio saudável é sobrar pelo menos 20%.` });
+    if (saldo >= totalEntradas * 0.2) insights.push({ cor: '#059669', bg: '#d1fae5', icone: '✓', titulo: 'Boa margem de sobra', texto: `Você guardou ${pct(saldo, totalEntradas)} do faturamento. Continue assim e use esse excedente para formar reserva ou reinvestir.` });
+    if (comp.length === 0) insights.push({ cor: '#d97706', bg: '#fef3c7', icone: 'i', titulo: 'Você tem gastos compartilhados?', texto: 'Celular, internet, combustível e energia são comuns em negócios. Se você os usa para trabalhar, parte é custo da empresa — e pode ser deduzida.' });
+    if (negocio.length === 0 && comp.length === 0) insights.push({ cor: '#dc2626', bg: '#fee2e2', icone: '!', titulo: 'Nenhum custo de negócio registrado', texto: 'Você não registrou nenhum gasto do negócio. Verifique se há custos que você está pagando da conta pessoal sem perceber.' });
+
+    document.getElementById('insights').innerHTML = insights.slice(0, 4).map(ins =>
+      `<div class="insight-item">
+        <div class="insight-icon" style="background:${ins.bg};color:${ins.cor}">${ins.icone}</div>
+        <div>
+          <div class="insight-titulo">${ins.titulo}</div>
+          <div class="insight-detalhe">${ins.texto}</div>
+        </div>
+      </div>`
+    ).join('');
+
+    irPara(4);
+  }
+
+  function var_ouro_light() { return '#fef3c7'; }
+
+  function regimeLabel() {
+    if (d.regime === 'mei') return 'MEI (5%)';
+    if (d.regime === 'simples') return 'Simples Nacional (8%)';
+    return 'Outro regime (12%)';
+  }
+
+  // Inicializa com 1 item em cada lista
+  adicionarItem('entradas');
+  adicionarItem('negocio');
+  adicionarItem('pessoal');
+  adicionarItemComp();
+</script>
+</body>
+</html>
