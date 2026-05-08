@@ -1998,7 +1998,7 @@ function askLimparAno() {
   document.getElementById('modal-limpar').classList.add('open');
 }
 async function confirmarLimparAno() {
-  const toDelE = DB.entConfirmadas().filter(e=>e.ano==dashAno);
+  const toDelE = DB.entradas.filter(e=>e.ano==dashAno);
   const toDelS = DB.saidas.filter(s=>s.ano==dashAno);
   try {
     for (const e of toDelE) await apiDelete('entradas', e.id);
