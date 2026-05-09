@@ -280,6 +280,10 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 .login-btn:active{transform:scale(.99)}
 .login-error{font-size:12px;color:var(--red);margin-top:8px;min-height:16px;font-weight:500}
 .login-hint{font-size:11px;color:var(--text3);margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:center;line-height:1.6}
+.login-toggle{display:flex;background:var(--surface2);border-radius:var(--r-sm);padding:3px;gap:2px;margin-bottom:20px}
+.login-toggle-btn{flex:1;padding:8px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-radius:6px;color:var(--text2);font-family:var(--font);transition:all .15s}
+.login-toggle-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.login-divider{height:1px;background:var(--border);margin:4px 0 12px}
 @media(max-width:480px){
   .login-box{padding:28px 20px;border-radius:var(--r-md)}
   .login-title{font-size:17px}
@@ -295,35 +299,45 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
       <div class="login-logo-mark">GF</div>
       <div>
         <div class="login-logo-name">Gestão Financeira</div>
-        <div class="login-logo-sub">Agência de Marketing</div>
+        <div class="login-logo-sub">Controle para empresas</div>
       </div>
     </div>
-    <div class="login-title">Acesso restrito</div>
-    <div class="login-sub">Insira o token de acesso para continuar.</div>
+
+    <!-- Toggle entrar / criar conta -->
+    <div class="login-toggle">
+      <button class="login-toggle-btn active" id="lt-entrar" onclick="setLoginModo('entrar')">Entrar</button>
+      <button class="login-toggle-btn" id="lt-cadastro" onclick="setLoginModo('cadastro')">Criar conta</button>
+    </div>
+
+    <!-- Campo nome (só no cadastro) -->
+    <div id="login-nome-wrap" style="display:none;margin-bottom:10px">
+      <label class="login-label" for="login-nome">Nome da agência</label>
+      <input class="login-input" type="text" id="login-nome" placeholder="Ex: Studio XYZ"
+        style="letter-spacing:0" onkeydown="if(event.key==='Enter')el('login-email').focus()">
+    </div>
+
     <label class="login-label" for="login-email">E-mail</label>
-    <input
-      class="login-input"
-      type="email"
-      id="login-email"
-      placeholder="seu@email.com"
-      autocomplete="email"
-      style="margin-bottom:10px;letter-spacing:0"
-      onkeydown="if(event.key==='Enter')el('login-senha').focus()"
-    >
+    <input class="login-input" type="email" id="login-email" placeholder="seu@email.com"
+      autocomplete="email" style="margin-bottom:10px;letter-spacing:0"
+      onkeydown="if(event.key==='Enter')el('login-senha').focus()">
+
     <label class="login-label" for="login-senha">Senha</label>
-    <input
-      class="login-input"
-      type="password"
-      id="login-senha"
-      placeholder="••••••••••••"
+    <input class="login-input" type="password" id="login-senha" placeholder="••••••••••••"
       autocomplete="current-password"
-      onkeydown="if(event.key==='Enter')doLogin()"
-    >
+      onkeydown="if(event.key==='Enter')doLogin()">
+
+    <!-- Campo confirmar senha (só no cadastro) -->
+    <div id="login-confirma-wrap" style="display:none;margin-top:10px">
+      <label class="login-label" for="login-confirma">Confirmar senha</label>
+      <input class="login-input" type="password" id="login-confirma" placeholder="••••••••••••"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+
     <div class="login-error" id="login-error"></div>
     <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
-    <div class="login-hint">
-      Acesso exclusivo para membros da equipe.<br>
-      Entre em contato com o administrador para criar sua conta.
+
+    <div class="login-hint" id="login-hint-text">
+      Acesse com seu e-mail e senha cadastrados.
     </div>
   </div>
 </div>
@@ -702,32 +716,87 @@ const SUPA_URL  = 'https://fotssarkgylorfahkwaa.supabase.co';
 const SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvdHNzYXJrZ3lsb3JmYWhrd2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NjIwMjIsImV4cCI6MjA5MTMzODAyMn0.Gel8RLs8Wqr6LX6A9zvJtP0MMgrvQtgbfsvKQDmHJco';
 const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
-// ═══ LOGIN ═════════════════════════════════════
-async function doLogin() {
-  const email = el('login-email').value.trim();
-  const senha = el('login-senha').value;
-  const errEl = el('login-error');
-  const btn   = el('login-btn');
-  if(!email || !senha){ errEl.textContent='Preencha e-mail e senha.'; return; }
-  btn.textContent = 'Entrando...'; btn.disabled = true;
-  errEl.textContent = '';
-  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
-  if(error){
-    errEl.textContent = 'E-mail ou senha incorretos.';
-    btn.textContent = 'Entrar'; btn.disabled = false;
-    const inp = el('login-senha');
-    inp.classList.add('error'); inp.value = ''; inp.focus();
-    inp.style.transition='transform .07s';
-    let n=0; const shake=setInterval(()=>{
-      inp.style.transform=n%2===0?'translateX(6px)':'translateX(-6px)';
-      if(++n>5){clearInterval(shake);inp.style.transform='';}
-    },70);
-    return;
-  }
+// ═══ LOGIN / CADASTRO ══════════════════════════
+let loginModo = 'entrar';
+
+function setLoginModo(modo) {
+  loginModo = modo;
+  el('lt-entrar').classList.toggle('active', modo==='entrar');
+  el('lt-cadastro').classList.toggle('active', modo==='cadastro');
+  el('login-nome-wrap').style.display     = modo==='cadastro' ? 'block' : 'none';
+  el('login-confirma-wrap').style.display = modo==='cadastro' ? 'block' : 'none';
+  el('login-btn').textContent = modo==='entrar' ? 'Entrar' : 'Criar conta';
+  el('login-hint-text').textContent = modo==='entrar'
+    ? 'Acesse com seu e-mail e senha cadastrados.'
+    : 'Crie sua conta para começar a usar o sistema.';
+  el('login-error').textContent = '';
+  ['login-nome','login-email','login-senha','login-confirma'].forEach(id=>{
+    const inp=el(id); if(inp) inp.classList.remove('error');
+  });
+}
+
+function loginShake(inputId, msg) {
+  el('login-error').textContent = msg;
+  const inp = el(inputId);
+  if(!inp) return;
+  inp.classList.add('error'); inp.value=''; inp.focus();
+  inp.style.transition='transform .07s';
+  let n=0; const s=setInterval(()=>{
+    inp.style.transform=n%2===0?'translateX(6px)':'translateX(-6px)';
+    if(++n>5){clearInterval(s);inp.style.transform='';}
+  },70);
+}
+
+function entrarNoApp(email) {
   el('login-screen').style.display='none';
-  btn.textContent='Entrar'; btn.disabled=false;
   const emailEl=el('sb-email-user');
   if(emailEl) emailEl.textContent=email;
+  const nomeEl=el('sb-nome-empresa');
+  if(nomeEl && el('login-nome') && el('login-nome').value.trim())
+    nomeEl.textContent=el('login-nome').value.trim();
+}
+
+async function doLogin() {
+  const errEl = el('login-error');
+  const btn   = el('login-btn');
+  const email = el('login-email').value.trim();
+  const senha = el('login-senha').value;
+  errEl.textContent = '';
+
+  if(!email || !senha){ errEl.textContent='Preencha e-mail e senha.'; return; }
+
+  if(loginModo === 'cadastro') {
+    const confirma = el('login-confirma').value;
+    const nome = el('login-nome').value.trim();
+    if(!nome){ errEl.textContent='Informe o nome da agência.'; return; }
+    if(senha.length < 6){ errEl.textContent='A senha precisa ter no mínimo 6 caracteres.'; return; }
+    if(senha !== confirma){ loginShake('login-confirma','As senhas não coincidem.'); return; }
+
+    btn.textContent='Criando conta...'; btn.disabled=true;
+    const { error } = await sb.auth.signUp({ email, password: senha });
+    btn.textContent='Criar conta'; btn.disabled=false;
+    if(error){
+      loginShake('login-senha', error.message.includes('already')
+        ? 'Este e-mail já possui uma conta. Faça login.'
+        : 'Erro ao criar conta: '+error.message);
+      return;
+    }
+    // Auto-login após cadastro
+    const { error: loginErr } = await sb.auth.signInWithPassword({ email, password: senha });
+    if(loginErr){ errEl.textContent='Conta criada! Faça login.'; setLoginModo('entrar'); return; }
+    entrarNoApp(email);
+    await carregarDados();
+    renderAll();
+    toast('Conta criada com sucesso! Bem-vindo ✓');
+    return;
+  }
+
+  // Modo entrar
+  btn.textContent='Entrando...'; btn.disabled=true;
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  btn.textContent='Entrar'; btn.disabled=false;
+  if(error){ loginShake('login-senha','E-mail ou senha incorretos.'); return; }
+  entrarNoApp(email);
   await carregarDados();
   renderAll();
 }
