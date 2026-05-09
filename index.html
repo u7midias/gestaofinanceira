@@ -49,6 +49,8 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
 .screen.active{display:block}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .page-header{margin-bottom:20px}
+.page-header-row{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+.page-header-row > button,.page-header-row > .btn{flex-shrink:0}
 .page-title{font-size:20px;font-weight:700;letter-spacing:-.4px;margin-bottom:2px}
 .page-sub{font-size:13px;color:var(--text2)}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow)}
@@ -95,11 +97,12 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 .seg{display:flex;background:var(--surface2);border-radius:var(--r-sm);padding:3px;gap:2px}
 .seg-btn{flex:1;padding:7px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-radius:6px;color:var(--text2);font-family:var(--font);transition:all .15s}
 .seg-btn.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
-.chart-bars{display:flex;align-items:flex-end;gap:6px;height:120px;padding:0 4px}
-.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
-.bar-stack{flex:1;width:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
-.bar-seg{width:100%;border-radius:3px 3px 0 0;transition:opacity .15s}
+.chart-bars{display:flex;align-items:flex-end;gap:4px;height:130px;padding:0 4px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:stretch;cursor:pointer;gap:0}
+.bar-group{display:flex;flex-direction:row;align-items:flex-end;gap:2px;width:100%;height:110px;flex:1}
+.bar-seg{border-radius:3px 3px 0 0;transition:opacity .15s;flex:1;align-self:flex-end}
 .bar-col:hover .bar-seg{opacity:.75}
+.bar-lbl-bottom{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.03em;text-align:center;margin-top:4px;flex-shrink:0}
 .hbar-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
 .hbar-row:last-child{border-bottom:none}
 .hbar-lbl{font-size:12px;color:var(--text2);width:120px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -140,22 +143,180 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 .toast.show{opacity:1;transform:translateY(0)}
 .mobile-nav{display:none}
 @media(max-width:768px){
+  /* Layout */
   .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:95;transform:translateX(-100%);width:260px}
   .sidebar.open{transform:translateX(0)}
   .menu-btn{display:flex}
-  .grid-4,.grid-3{grid-template-columns:1fr 1fr}
+  .main{padding-bottom:66px}
+  .content{padding:12px}
+  .topbar{padding:0 12px;height:50px;gap:8px}
+  .tb-title{font-size:14px}
+
+  /* Grids — tudo em coluna única no mobile */
+  .grid-4{grid-template-columns:1fr 1fr}
+  .grid-3{grid-template-columns:1fr 1fr}
   .grid-2{grid-template-columns:1fr}
-  .content{padding:14px}
-  .topbar{padding:0 14px}
-  .main{padding-bottom:62px}
-  .mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:80;padding:6px 0 max(env(safe-area-inset-bottom),8px)}
-  .mobile-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;font-size:9px;font-weight:600;color:var(--text3);background:none;border:none;cursor:pointer;font-family:var(--font);letter-spacing:.03em;transition:color .12s}
+
+  /* KPI cards menores */
+  .kpi-card{padding:12px 14px}
+  .kpi-value{font-size:18px}
+  .kpi-label{font-size:11px}
+  .kpi-footer{font-size:10px}
+
+  /* Page header */
+  .page-header{margin-bottom:14px}
+  .page-title{font-size:17px}
+  .page-sub{font-size:12px}
+  .page-header > div:first-child + *{width:100%}
+
+  /* Cards */
+  .card-pad{padding:12px 14px}
+  .card-title{font-size:11px;margin-bottom:8px}
+
+  /* Topbar selects menores */
+  .tb-right select{font-size:12px;padding:4px 7px}
+  .tb-right .icon-btn{width:30px;height:30px;font-size:13px}
+
+  /* Tabelas — compactar */
+  th{padding:8px 10px;font-size:10px}
+  td{padding:9px 10px;font-size:12px}
+  .td-num{font-size:12px}
+
+  /* Gráfico de barras */
+  .chart-bars{height:90px}
+  .bar-group{height:80px}
+  .bar-lbl{font-size:8px}
+
+  /* Barras horizontais */
+  .hbar-lbl{width:80px;font-size:11px}
+  .hbar-val{font-size:11px;width:60px}
+
+  /* Botões de ação */
+  .btn{padding:6px 12px;font-size:12px}
+  .btn-sm{padding:4px 8px;font-size:11px}
+
+  /* Modais — tela cheia no mobile */
+  .modal-wrap{padding:0;align-items:flex-end}
+  .modal{border-radius:20px 20px 0 0;max-height:92vh;border-bottom:none}
+  .modal-body{padding:14px 16px;gap:10px}
+  .modal-header{padding:14px 16px}
+  .modal-footer{padding:10px 16px}
+
+  /* Formulários no modal */
+  .form-row{gap:8px}
+  .form-group{min-width:90px}
+  .form-group.w-auto{flex:0 0 auto}
+  input,select{font-size:13px;padding:7px 9px}
+
+  /* Segs */
+  .seg-btn{padding:6px 4px;font-size:12px}
+
+  /* Toggle recorrente */
+  .toggle-row{padding:8px 10px}
+  .rec-fields{padding:8px 10px;gap:8px}
+  .inv-fields{padding:8px 10px}
+
+  /* Section label */
+  .section-label{font-size:10px}
+
+  /* Badges menores */
+  .badge{font-size:10px;padding:2px 6px}
+  .recorrente-tag,.investimento-tag{font-size:9px;padding:1px 5px}
+
+  /* Busca */
+  .search-box{max-width:100%;flex:1}
+  #lanc-busca{font-size:12px}
+  #lanc-periodo{font-size:12px;padding:6px 8px}
+
+  /* Lançamentos filtros em wrap */
+  #sc-lancamentos .page-header{flex-direction:column;align-items:stretch}
+  #sc-lancamentos .page-header button{width:100%}
+  #sc-lancamentos > div:nth-child(3){flex-direction:column}
+  #sc-lancamentos > div:nth-child(3) .seg{width:100%}
+
+  /* Contas lado a lado em mobile vira coluna */
+  #sc-contas .grid-2{grid-template-columns:1fr}
+
+  /* Equipe */
+  .avatar{width:30px;height:30px;font-size:11px}
+
+  /* Relatório previsão */
+  #rel-prev{grid-template-columns:1fr}
+
+  /* Page header rows — button em baixo */
+  .page-header-row{flex-direction:column;align-items:stretch}
+  .page-header-row > button,.page-header-row > .btn{width:100%}
+
+  /* Nav inferior */
+  .mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:80;padding:5px 0 max(env(safe-area-inset-bottom),8px)}
+  .mobile-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;font-size:9px;font-weight:600;color:var(--text3);background:none;border:none;cursor:pointer;font-family:var(--font);letter-spacing:.03em;transition:color .12s}
   .mobile-nav-btn.active{color:var(--text)}
-  .mobile-nav-icon{font-size:18px;line-height:1}
+  .mobile-nav-icon{font-size:20px;line-height:1}
+}
+
+@media(max-width:400px){
+  .grid-4{grid-template-columns:1fr 1fr}
+  .grid-3{grid-template-columns:1fr}
+  .kpi-value{font-size:16px}
+  .tb-right select:first-child{display:none}
+}
+
+/* ─── LOGIN ─────────────────────────────────── */
+.login-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-md);width:100%;max-width:360px;padding:36px 32px}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.login-logo-mark{width:36px;height:36px;border-radius:var(--r-sm);background:var(--text);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.login-logo-name{font-size:17px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.login-logo-sub{font-size:11px;color:var(--text3)}
+.login-title{font-size:19px;font-weight:700;color:var(--text);letter-spacing:-.3px;margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+.login-label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px}
+.login-input{width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r-sm);font-size:14px;font-family:var(--font);background:var(--surface);color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s;letter-spacing:.08em}
+.login-input:focus{border-color:var(--text);box-shadow:0 0 0 3px rgba(26,26,24,.08)}
+.login-input.error{border-color:var(--red);box-shadow:0 0 0 3px rgba(192,57,43,.1)}
+.login-btn{width:100%;padding:11px;background:var(--text);color:#fff;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;margin-top:14px;transition:opacity .15s,transform .1s;letter-spacing:.02em}
+.login-btn:hover{opacity:.88}
+.login-btn:active{transform:scale(.99)}
+.login-error{font-size:12px;color:var(--red);margin-top:8px;min-height:16px;font-weight:500}
+.login-hint{font-size:11px;color:var(--text3);margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:center;line-height:1.6}
+@media(max-width:480px){
+  .login-box{padding:28px 20px;border-radius:var(--r-md)}
+  .login-title{font-size:17px}
 }
 </style>
 </head>
 <body>
+
+<!-- ── LOGIN SCREEN ─────────────────────────────── -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-mark">GF</div>
+      <div>
+        <div class="login-logo-name">Gestão Financeira</div>
+        <div class="login-logo-sub">Agência de Marketing</div>
+      </div>
+    </div>
+    <div class="login-title">Acesso restrito</div>
+    <div class="login-sub">Insira o token de acesso para continuar.</div>
+    <label class="login-label" for="login-token">Token de acesso</label>
+    <input
+      class="login-input"
+      type="password"
+      id="login-token"
+      placeholder="••••••••••••"
+      autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doLogin()"
+    >
+    <div class="login-error" id="login-error"></div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-hint">
+      Acesso exclusivo para membros da equipe.<br>
+      Entre em contato com o administrador caso não tenha o token.
+    </div>
+  </div>
+</div>
+
 
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 
@@ -245,7 +406,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 
     <!-- LANÇAMENTOS -->
     <div class="screen" id="sc-lancamentos">
-      <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div class="page-header-row">
         <div><div class="page-title">Lançamentos</div><div class="page-sub">Receitas, despesas e investimentos</div></div>
         <button class="btn btn-primary" onclick="openModal('modal-novo')">+ Novo lançamento</button>
       </div>
@@ -285,7 +446,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 
     <!-- CONTAS -->
     <div class="screen" id="sc-contas">
-      <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div class="page-header-row">
         <div><div class="page-title">Contas</div><div class="page-sub">Contas a pagar e a receber</div></div>
         <button class="btn btn-primary" onclick="openModal('modal-conta')">+ Nova conta</button>
       </div>
@@ -311,7 +472,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 
     <!-- EQUIPE -->
     <div class="screen" id="sc-equipe">
-      <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div class="page-header-row">
         <div><div class="page-title">Equipe</div><div class="page-sub">Colaboradores e folha de pagamento</div></div>
         <button class="btn btn-primary" onclick="openModal('modal-colab')">+ Colaborador</button>
       </div>
@@ -523,6 +684,43 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 <div class="toast-area" id="toast-area"></div>
 
 <script>
+
+// ═══ LOGIN ═════════════════════════════════════
+const ACCESS_TOKEN = 'agencia2025'; // ← altere este token
+
+function doLogin() {
+  const val = document.getElementById('login-token').value.trim();
+  const errEl = document.getElementById('login-error');
+  const inp = document.getElementById('login-token');
+  if(val === ACCESS_TOKEN) {
+    try { sessionStorage.setItem('gf_auth','1'); } catch(e){}
+    document.getElementById('login-screen').style.display = 'none';
+    inp.classList.remove('error');
+    errEl.textContent = '';
+  } else {
+    inp.classList.add('error');
+    errEl.textContent = 'Token incorreto. Tente novamente.';
+    inp.value = '';
+    inp.focus();
+    // shake animation
+    inp.style.transition = 'transform .07s';
+    let n=0; const shake=setInterval(()=>{
+      inp.style.transform = n%2===0?'translateX(6px)':'translateX(-6px)';
+      if(++n>5){ clearInterval(shake); inp.style.transform=''; }
+    },70);
+  }
+}
+
+function checkAuth() {
+  try {
+    if(sessionStorage.getItem('gf_auth')==='1') {
+      document.getElementById('login-screen').style.display = 'none';
+    }
+  } catch(e) {
+    document.getElementById('login-screen').style.display = 'none';
+  }
+}
+
 // ═══ CONSTANTES ═══════════════════════════════
 const MESES   = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MESES_F = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -820,8 +1018,8 @@ function renderDashboard() {
       lAno.filter(l=>l.tipo==='despesa'&&l.status==='Pago'&&l.mes===m).reduce((s,l)=>s+l.valor,0)
     );
   }));
-  const barsEl=el('chart-bars'), labsEl=el('chart-labels');
-  barsEl.innerHTML=''; labsEl.innerHTML='';
+  const barsEl=el('chart-bars');
+  barsEl.innerHTML='';
   MESES.forEach((lbl,i)=>{
     const m=i+1;
     const r=lAno.filter(l=>l.tipo==='receita'&&l.status==='Pago'&&l.mes===m).reduce((s,l)=>s+l.valor,0);
@@ -830,16 +1028,20 @@ function renderDashboard() {
     const hR=Math.round(r/maxV*110), hD=Math.round(d/maxV*110), hI=Math.round(inv/maxV*110);
     const isCur=m===mes;
     const col=document.createElement('div'); col.className='bar-col';
-    if(isCur){ col.style.outline='2px solid var(--border2)'; col.style.borderRadius='6px'; }
-    col.innerHTML='<div class="bar-stack">'
-      +'<div class="bar-seg" style="height:'+Math.max(hR,r>0?2:0)+'px;background:var(--green);opacity:'+(r>0?.8:.1)+'"></div>'
-      +'<div class="bar-seg" style="height:'+Math.max(hD,d>0?2:0)+'px;background:var(--red);opacity:'+(d>0?.75:.1)+'"></div>'
-      +'<div class="bar-seg" style="height:'+Math.max(hI,inv>0?2:0)+'px;background:var(--purple);opacity:'+(inv>0?.7:.1)+'"></div>'
-      +'</div>';
+    if(isCur){ col.style.outline='2px solid var(--border2)'; col.style.borderRadius='6px'; col.style.padding='2px'; }
+    const grp=document.createElement('div'); grp.className='bar-group';
+    const bR=document.createElement('div'); bR.className='bar-seg';
+    bR.style.cssText='height:'+Math.max(hR,r>0?3:0)+'px;background:var(--green);opacity:'+(r>0?.82:.1);
+    const bD=document.createElement('div'); bD.className='bar-seg';
+    bD.style.cssText='height:'+Math.max(hD,d>0?3:0)+'px;background:var(--red);opacity:'+(d>0?.78:.1);
+    const bI=document.createElement('div'); bI.className='bar-seg';
+    bI.style.cssText='height:'+Math.max(hI,inv>0?3:0)+'px;background:var(--purple);opacity:'+(inv>0?.72:.1);
+    grp.appendChild(bR); grp.appendChild(bD); grp.appendChild(bI);
+    const lbEl=document.createElement('div'); lbEl.className='bar-lbl-bottom';
+    lbEl.style.color=isCur?'var(--text)':'var(--text3)';
+    lbEl.textContent=lbl;
+    col.appendChild(grp); col.appendChild(lbEl);
     barsEl.appendChild(col);
-    const lb=document.createElement('div');
-    lb.style.cssText='flex:1;text-align:center;font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:'+(isCur?'var(--text)':'var(--text3)');
-    lb.textContent=lbl; labsEl.appendChild(lb);
   });
 
   // Categorias despesas mês (só pagas)
@@ -1049,6 +1251,7 @@ function renderAll() {
 
 // ═══ INIT ══════════════════════════════════════
 (function init(){
+  checkAuth();
   load();
   el('sel-mes').value=CUR_MES;
   el('nl-mes').value=CUR_MES;
