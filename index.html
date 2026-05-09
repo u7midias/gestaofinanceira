@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Gestão Financeira</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -98,9 +99,9 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 .seg-btn{flex:1;padding:7px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-radius:6px;color:var(--text2);font-family:var(--font);transition:all .15s}
 .seg-btn.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
 .chart-bars{display:flex;align-items:flex-end;gap:4px;height:130px;padding:0 4px}
-.bar-col{flex:1;display:flex;flex-direction:column;align-items:stretch;cursor:pointer;gap:0}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:stretch;cursor:pointer;gap:0;min-width:0}
 .bar-group{display:flex;flex-direction:row;align-items:flex-end;gap:2px;width:100%;height:110px;flex:1}
-.bar-seg{border-radius:3px 3px 0 0;transition:opacity .15s;flex:1;align-self:flex-end}
+.bar-seg{border-radius:3px 3px 0 0;transition:opacity .15s;flex:1;min-width:0;align-self:flex-end;display:block}
 .bar-col:hover .bar-seg{opacity:.75}
 .bar-lbl-bottom{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.03em;text-align:center;margin-top:4px;flex-shrink:0}
 .hbar-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
@@ -299,20 +300,30 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
     </div>
     <div class="login-title">Acesso restrito</div>
     <div class="login-sub">Insira o token de acesso para continuar.</div>
-    <label class="login-label" for="login-token">Token de acesso</label>
+    <label class="login-label" for="login-email">E-mail</label>
+    <input
+      class="login-input"
+      type="email"
+      id="login-email"
+      placeholder="seu@email.com"
+      autocomplete="email"
+      style="margin-bottom:10px;letter-spacing:0"
+      onkeydown="if(event.key==='Enter')el('login-senha').focus()"
+    >
+    <label class="login-label" for="login-senha">Senha</label>
     <input
       class="login-input"
       type="password"
-      id="login-token"
+      id="login-senha"
       placeholder="••••••••••••"
       autocomplete="current-password"
       onkeydown="if(event.key==='Enter')doLogin()"
     >
     <div class="login-error" id="login-error"></div>
-    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
     <div class="login-hint">
       Acesso exclusivo para membros da equipe.<br>
-      Entre em contato com o administrador caso não tenha o token.
+      Entre em contato com o administrador para criar sua conta.
     </div>
   </div>
 </div>
@@ -336,10 +347,11 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
     <button class="sb-item" onclick="nav('relatorio',this)"><span class="sb-icon">▦</span>Relatório</button>
   </nav>
   <div class="sb-footer">
-    <div class="sb-empresa">
-      <div class="sb-empresa-name">Minha Agência</div>
-      <div class="sb-empresa-seg">Marketing Digital</div>
+    <div class="sb-empresa" style="margin-bottom:8px">
+      <div class="sb-empresa-name" id="sb-nome-empresa">—</div>
+      <div class="sb-empresa-seg" id="sb-email-user">—</div>
     </div>
+    <button onclick="doLogout()" style="width:100%;padding:8px;font-size:12px;font-weight:600;background:transparent;border:1px solid var(--border2);border-radius:var(--r-sm);cursor:pointer;color:var(--text2);font-family:var(--font)">Sair da conta</button>
   </div>
 </aside>
 
@@ -685,40 +697,56 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 
 <script>
 
-// ═══ LOGIN ═════════════════════════════════════
-const ACCESS_TOKEN = 'agencia2025'; // ← altere este token
+// ═══ SUPABASE ══════════════════════════════════
+const SUPA_URL  = 'https://fotssarkgylorfahkwaa.supabase.co';
+const SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvdHNzYXJrZ3lsb3JmYWhrd2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NjIwMjIsImV4cCI6MjA5MTMzODAyMn0.Gel8RLs8Wqr6LX6A9zvJtP0MMgrvQtgbfsvKQDmHJco';
+const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
-function doLogin() {
-  const val = document.getElementById('login-token').value.trim();
-  const errEl = document.getElementById('login-error');
-  const inp = document.getElementById('login-token');
-  if(val === ACCESS_TOKEN) {
-    try { sessionStorage.setItem('gf_auth','1'); } catch(e){}
-    document.getElementById('login-screen').style.display = 'none';
-    inp.classList.remove('error');
-    errEl.textContent = '';
-  } else {
-    inp.classList.add('error');
-    errEl.textContent = 'Token incorreto. Tente novamente.';
-    inp.value = '';
-    inp.focus();
-    // shake animation
-    inp.style.transition = 'transform .07s';
+// ═══ LOGIN ═════════════════════════════════════
+async function doLogin() {
+  const email = el('login-email').value.trim();
+  const senha = el('login-senha').value;
+  const errEl = el('login-error');
+  const btn   = el('login-btn');
+  if(!email || !senha){ errEl.textContent='Preencha e-mail e senha.'; return; }
+  btn.textContent = 'Entrando...'; btn.disabled = true;
+  errEl.textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  if(error){
+    errEl.textContent = 'E-mail ou senha incorretos.';
+    btn.textContent = 'Entrar'; btn.disabled = false;
+    const inp = el('login-senha');
+    inp.classList.add('error'); inp.value = ''; inp.focus();
+    inp.style.transition='transform .07s';
     let n=0; const shake=setInterval(()=>{
-      inp.style.transform = n%2===0?'translateX(6px)':'translateX(-6px)';
-      if(++n>5){ clearInterval(shake); inp.style.transform=''; }
+      inp.style.transform=n%2===0?'translateX(6px)':'translateX(-6px)';
+      if(++n>5){clearInterval(shake);inp.style.transform='';}
     },70);
+    return;
+  }
+  el('login-screen').style.display='none';
+  btn.textContent='Entrar'; btn.disabled=false;
+  const emailEl=el('sb-email-user');
+  if(emailEl) emailEl.textContent=email;
+  await carregarDados();
+  renderAll();
+}
+
+async function checkAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){
+    el('login-screen').style.display='none';
+    const emailEl=el('sb-email-user');
+    if(emailEl) emailEl.textContent=session.user.email;
+    await carregarDados();
+    renderAll();
   }
 }
 
-function checkAuth() {
-  try {
-    if(sessionStorage.getItem('gf_auth')==='1') {
-      document.getElementById('login-screen').style.display = 'none';
-    }
-  } catch(e) {
-    document.getElementById('login-screen').style.display = 'none';
-  }
+async function doLogout() {
+  await sb.auth.signOut();
+  lancamentos=[]; contas=[]; equipe=[];
+  location.reload();
 }
 
 // ═══ CONSTANTES ═══════════════════════════════
@@ -739,65 +767,78 @@ const CUR_MES = now.getMonth()+1;
 const CUR_ANO = now.getFullYear();
 
 // ═══ DADOS ════════════════════════════════════
-let lancamentos = [
-  {id:1,tipo:'receita',desc:'Contrato — Cliente Alpha',valor:9500,dia:5,mes:1,ano:2025,cat:'Contrato mensal',status:'Pago',obs:'',recorrente:true},
-  {id:2,tipo:'receita',desc:'Projeto Landing Page',valor:4800,dia:15,mes:1,ano:2025,cat:'Projeto pontual',status:'Pago',obs:'',recorrente:false},
-  {id:3,tipo:'despesa',desc:'Salários',valor:8200,dia:5,mes:1,ano:2025,cat:'Pessoal / Salários',status:'Pago',obs:'',recorrente:true},
-  {id:4,tipo:'despesa',desc:'Tráfego pago clientes',valor:3200,dia:10,mes:1,ano:2025,cat:'Tráfego pago',status:'Pago',obs:'',recorrente:false},
-  {id:5,tipo:'investimento',desc:'Câmera Sony ZV-E10',valor:3500,dia:20,mes:1,ano:2025,cat:'Equipamentos',status:'Pago',obs:'',recorrente:false},
-  {id:6,tipo:'receita',desc:'Contrato — Cliente Alpha',valor:9500,dia:5,mes:2,ano:2025,cat:'Contrato mensal',status:'Pago',obs:'',recorrente:true},
-  {id:7,tipo:'receita',desc:'Contrato — Cliente Beta',valor:6200,dia:8,mes:2,ano:2025,cat:'Contrato mensal',status:'Pago',obs:'',recorrente:true},
-  {id:8,tipo:'despesa',desc:'Salários',valor:8200,dia:5,mes:2,ano:2025,cat:'Pessoal / Salários',status:'Pago',obs:'',recorrente:true},
-  {id:9,tipo:'despesa',desc:'RD Station',valor:480,dia:1,mes:2,ano:2025,cat:'Ferramentas / Software',status:'Pago',obs:'',recorrente:true},
-  {id:10,tipo:'receita',desc:'Contrato — Cliente Alpha',valor:9500,dia:5,mes:3,ano:2025,cat:'Contrato mensal',status:'Pago',obs:'',recorrente:true},
-  {id:11,tipo:'receita',desc:'Contrato — Cliente Beta',valor:6200,dia:8,mes:3,ano:2025,cat:'Contrato mensal',status:'Pago',obs:'',recorrente:true},
-  {id:12,tipo:'receita',desc:'Consultoria Estratégica',valor:7500,dia:22,mes:3,ano:2025,cat:'Consultoria',status:'Pago',obs:'',recorrente:false},
-  {id:13,tipo:'despesa',desc:'Salários',valor:8200,dia:5,mes:3,ano:2025,cat:'Pessoal / Salários',status:'Pago',obs:'',recorrente:true},
-  {id:14,tipo:'despesa',desc:'Imposto Simples Nacional',valor:1800,dia:20,mes:3,ano:2025,cat:'Impostos / Taxas',status:'Pago',obs:'',recorrente:false},
-  {id:15,tipo:'investimento',desc:'Curso Google Ads',valor:890,dia:10,mes:3,ano:2025,cat:'Capacitação / Cursos',status:'Pago',obs:'',recorrente:false},
-  {id:16,tipo:'receita',desc:'Contrato — Cliente Alpha',valor:9500,dia:5,mes:4,ano:2025,cat:'Contrato mensal',status:'Pago',obs:'',recorrente:true},
-  {id:17,tipo:'receita',desc:'Contrato — Cliente Beta',valor:6200,dia:8,mes:4,ano:2025,cat:'Contrato mensal',status:'Pago',obs:'',recorrente:true},
-  {id:18,tipo:'receita',desc:'Contrato — Cliente Gamma',valor:8000,dia:10,mes:4,ano:2025,cat:'Contrato mensal',status:'Pago',obs:'',recorrente:true},
-  {id:19,tipo:'despesa',desc:'Salários',valor:8200,dia:5,mes:4,ano:2025,cat:'Pessoal / Salários',status:'Pago',obs:'',recorrente:true},
-  {id:20,tipo:'despesa',desc:'Freelancer — Designer',valor:2400,dia:15,mes:4,ano:2025,cat:'Freelancers',status:'Pago',obs:'',recorrente:false},
-  {id:21,tipo:'receita',desc:'Contrato — Cliente Alpha',valor:9500,dia:5,mes:5,ano:2025,cat:'Contrato mensal',status:'Pendente',obs:'',recorrente:true},
-  {id:22,tipo:'receita',desc:'Contrato — Cliente Beta',valor:6200,dia:8,mes:5,ano:2025,cat:'Contrato mensal',status:'Pendente',obs:'',recorrente:true},
-  {id:23,tipo:'receita',desc:'Contrato — Cliente Gamma',valor:8000,dia:10,mes:5,ano:2025,cat:'Contrato mensal',status:'Pendente',obs:'',recorrente:true},
-  {id:24,tipo:'despesa',desc:'Salários',valor:8200,dia:5,mes:5,ano:2025,cat:'Pessoal / Salários',status:'Pago',obs:'',recorrente:true},
-  {id:25,tipo:'despesa',desc:'Contabilidade',valor:650,dia:10,mes:5,ano:2025,cat:'Contabilidade',status:'Pendente',obs:'',recorrente:true},
-];
-let contas = [
-  {id:101,tipo:'pagar',desc:'Aluguel escritório',valor:2800,dia:10,mes:6,ano:2025},
-  {id:102,tipo:'receber',desc:'Contrato Cliente Delta',valor:12000,dia:15,mes:6,ano:2025},
-];
-let equipe = [
-  {id:201,nome:'Ana Costa',func:'Social Media',valor:3800,venc:'Todo dia 5'},
-  {id:202,nome:'Bruno Reis',func:'Tráfego Pago',valor:4500,venc:'Todo dia 5'},
-  {id:203,nome:'Carla Lima',func:'Design',valor:3200,venc:'Todo dia 10'},
-];
-let nextId = 400;
+let lancamentos = [];
+let contas = [];
+let equipe = [];
+let nextId = 1;
 let lancFiltro = 'todos';
 let nlTipo = 'receita';
 let ncTipo = 'pagar';
 let currentScreen = 'dashboard';
 
 // ═══ PERSISTÊNCIA ══════════════════════════════
-function save() {
+// save/load agora são via Supabase — funções individuais por operação
+function save(){}  // mantido para compatibilidade, não faz nada
+function load(){}  // idem
+
+async function carregarDados() {
   try {
-    localStorage.setItem('gf2_lanc', JSON.stringify(lancamentos));
-    localStorage.setItem('gf2_contas', JSON.stringify(contas));
-    localStorage.setItem('gf2_equipe', JSON.stringify(equipe));
-  } catch(e){}
+    const [lr, cr, er] = await Promise.all([
+      sb.from('lancamentos').select('*').order('ano').order('mes').order('dia'),
+      sb.from('contas').select('*').order('ano').order('mes').order('dia'),
+      sb.from('equipe').select('*').order('created_at'),
+    ]);
+    lancamentos = (lr.data||[]).map(dbToLanc);
+    contas      = (cr.data||[]).map(dbToConta);
+    equipe      = (er.data||[]).map(dbToColab);
+  } catch(e){ toast('Erro ao carregar dados',true); }
 }
-function load() {
-  try {
-    const l=localStorage.getItem('gf2_lanc');
-    const c=localStorage.getItem('gf2_contas');
-    const e=localStorage.getItem('gf2_equipe');
-    if(l) lancamentos=JSON.parse(l);
-    if(c) contas=JSON.parse(c);
-    if(e) equipe=JSON.parse(e);
-  } catch(e){}
+
+// Conversores DB ↔ App
+function dbToLanc(r){ return {id:r.id,tipo:r.tipo,desc:r.descricao,valor:Number(r.valor),dia:r.dia,mes:r.mes,ano:r.ano,cat:r.cat||'',status:r.status,obs:r.obs||'',recorrente:r.recorrente}; }
+function lancToDb(l){ return {descricao:l.desc,tipo:l.tipo,valor:l.valor,dia:l.dia||null,mes:l.mes,ano:l.ano,cat:l.cat||null,status:l.status,obs:l.obs||null,recorrente:!!l.recorrente}; }
+function dbToConta(r){ return {id:r.id,tipo:r.tipo,desc:r.descricao,valor:Number(r.valor),dia:r.dia,mes:r.mes,ano:r.ano}; }
+function contaToDb(c){ return {descricao:c.desc,tipo:c.tipo,valor:c.valor,dia:c.dia||null,mes:c.mes,ano:c.ano}; }
+function dbToColab(r){ return {id:r.id,nome:r.nome,func:r.func,valor:Number(r.valor),venc:r.venc||''}; }
+function colabToDb(e){ return {nome:e.nome,func:e.func,valor:e.valor,venc:e.venc||null}; }
+
+// INSERT lançamento
+async function dbInsertLanc(l) {
+  const { data, error } = await sb.from('lancamentos').insert(lancToDb(l)).select().single();
+  if(error){ toast('Erro ao salvar: '+error.message,true); return null; }
+  return data.id;
+}
+// UPDATE status lançamento
+async function dbUpdateStatus(id, status) {
+  const { error } = await sb.from('lancamentos').update({status}).eq('id',id);
+  if(error){ toast('Erro ao atualizar',true); }
+}
+// DELETE lançamento
+async function dbDeleteLanc(id) {
+  const { error } = await sb.from('lancamentos').delete().eq('id',id);
+  if(error){ toast('Erro ao remover',true); }
+}
+// INSERT conta
+async function dbInsertConta(c) {
+  const { data, error } = await sb.from('contas').insert(contaToDb(c)).select().single();
+  if(error){ toast('Erro ao salvar conta',true); return null; }
+  return data.id;
+}
+// DELETE conta
+async function dbDeleteConta(id) {
+  const { error } = await sb.from('contas').delete().eq('id',id);
+  if(error){ toast('Erro ao remover conta',true); }
+}
+// INSERT colab
+async function dbInsertColab(e) {
+  const { data, error } = await sb.from('equipe').insert(colabToDb(e)).select().single();
+  if(error){ toast('Erro ao salvar colaborador',true); return null; }
+  return data.id;
+}
+// DELETE colab
+async function dbDeleteColab(id) {
+  const { error } = await sb.from('equipe').delete().eq('id',id);
+  if(error){ toast('Erro ao remover',true); }
 }
 
 // ═══ FORMATAÇÃO ═══════════════════════════════
@@ -882,7 +923,7 @@ function setLancFiltro(f) {
   renderLancamentos();
 }
 
-function salvarLancamento() {
+async function salvarLancamento() {
   const desc  = el('nl-desc').value.trim();
   const valor = parseFloat(el('nl-valor').value);
   const dia   = parseInt(el('nl-dia').value)||1;
@@ -892,79 +933,87 @@ function salvarLancamento() {
   const status= el('nl-status').value;
   const obs   = el('nl-obs').value.trim();
   const isRec = el('nl-recorrente').checked;
-
   if(!desc||!valor||valor<=0){ toast('Preencha descrição e valor',true); return; }
-
+  const btn=document.querySelector('#modal-novo .modal-footer .btn-primary');
+  if(btn){btn.textContent='Salvando...';btn.disabled=true;}
   if(isRec) {
-    const ateMes = parseInt(el('nl-rec-mes').value);
-    const ateAno = parseInt(el('nl-rec-ano').value);
-    let cm = mes, ca = ano;
-    let count = 0;
-    while((ca < ateAno)||(ca===ateAno && cm<=ateMes)) {
-      // parcelas recorrentes sempre ficam Pendente
-      lancamentos.push({id:nextId++,tipo:nlTipo,desc,valor,dia,mes:cm,ano:ca,cat,status:'Pendente',obs,recorrente:true});
-      count++;
-      cm++; if(cm>12){cm=1;ca++;}
-      if(count>60) break; // segurança
+    const ateMes=parseInt(el('nl-rec-mes').value);
+    const ateAno=parseInt(el('nl-rec-ano').value);
+    let cm=mes,ca=ano,count=0; const rows=[];
+    while((ca<ateAno)||(ca===ateAno&&cm<=ateMes)){
+      rows.push(lancToDb({tipo:nlTipo,desc,valor,dia,mes:cm,ano:ca,cat,status:'Pendente',obs,recorrente:true}));
+      count++; cm++; if(cm>12){cm=1;ca++;} if(count>60)break;
     }
-    toast(count+' parcelas criadas como Pendente ✓');
+    const {error}=await sb.from('lancamentos').insert(rows);
+    if(error){toast('Erro: '+error.message,true);}
+    else{toast(count+' parcelas criadas como Pendente ✓');}
   } else {
-    lancamentos.push({id:nextId++,tipo:nlTipo,desc,valor,dia,mes,ano,cat,status,obs,recorrente:false});
-    toast(nlTipo==='receita'?'Receita salva ✓':nlTipo==='despesa'?'Despesa salva ✓':'Investimento salvo ✓');
+    const obj={tipo:nlTipo,desc,valor,dia,mes,ano,cat,status,obs,recorrente:false};
+    const newId=await dbInsertLanc(obj);
+    if(newId){obj.id=newId;lancamentos.push(obj);toast(nlTipo==='receita'?'Receita salva ✓':nlTipo==='despesa'?'Despesa salva ✓':'Investimento salvo ✓');}
   }
-
-  save();
+  if(btn){btn.textContent='Salvar';btn.disabled=false;}
   closeModal('modal-novo');
   ['nl-desc','nl-valor','nl-dia','nl-obs'].forEach(id=>el(id).value='');
   el('nl-recorrente').checked=false; toggleRecFields();
-  renderAll();
+  await carregarDados(); renderAll();
 }
 
-function toggleStatus(id) {
+async function toggleStatus(id) {
   const l = lancamentos.find(x=>x.id===id);
   if(!l) return;
-  l.status = l.status==='Pago' ? 'Pendente' : 'Pago';
-  save(); renderAll();
-  toast(l.status==='Pago'?'Marcado como pago ✓':'Marcado como pendente');
+  const novoStatus = l.status==='Pago'?'Pendente':'Pago';
+  await dbUpdateStatus(id, novoStatus);
+  l.status = novoStatus;
+  renderAll();
+  toast(novoStatus==='Pago'?'Marcado como pago ✓':'Marcado como pendente');
 }
-function delLanc(id){ lancamentos=lancamentos.filter(x=>x.id!==id); save(); toast('Removido'); renderAll(); }
+async function delLanc(id){
+  await dbDeleteLanc(id);
+  lancamentos=lancamentos.filter(x=>x.id!==id);
+  toast('Removido'); renderAll();
+}
 
 // ═══ CONTAS ════════════════════════════════════
-function salvarConta() {
-  const desc  = el('nc-desc').value.trim();
-  const valor = parseFloat(el('nc-valor').value);
-  const dia   = parseInt(el('nc-dia').value)||1;
-  const mes   = parseInt(el('nc-mes').value);
-  const ano   = parseInt(el('nc-ano').value);
-  if(!desc||!valor||valor<=0){ toast('Preencha descrição e valor',true); return; }
-  contas.push({id:nextId++,tipo:ncTipo,desc,valor,dia,mes,ano});
-  save(); closeModal('modal-conta');
+async function salvarConta() {
+  const desc=el('nc-desc').value.trim(), valor=parseFloat(el('nc-valor').value);
+  const dia=parseInt(el('nc-dia').value)||1, mes=parseInt(el('nc-mes').value), ano=parseInt(el('nc-ano').value);
+  if(!desc||!valor||valor<=0){toast('Preencha descrição e valor',true);return;}
+  const obj={tipo:ncTipo,desc,valor,dia,mes,ano};
+  const newId=await dbInsertConta(obj);
+  if(newId){obj.id=newId;contas.push(obj);}
+  closeModal('modal-conta');
   ['nc-desc','nc-valor','nc-dia'].forEach(id=>el(id).value='');
   toast('Conta salva ✓'); renderAll();
 }
-function pagarConta(id) {
+async function pagarConta(id) {
   const c=contas.find(x=>x.id===id); if(!c) return;
-  lancamentos.push({id:nextId++,tipo:'despesa',desc:c.desc,valor:c.valor,dia:c.dia,mes:c.mes,ano:c.ano,cat:'Outros',status:'Pago',obs:'Da conta',recorrente:false});
-  contas=contas.filter(x=>x.id!==id); save(); toast('Pago e lançado ✓'); renderAll();
+  const lanc={tipo:'despesa',desc:c.desc,valor:c.valor,dia:c.dia,mes:c.mes,ano:c.ano,cat:'Outros',status:'Pago',obs:'Da conta',recorrente:false};
+  const newId=await dbInsertLanc(lanc); if(newId){lanc.id=newId;lancamentos.push(lanc);}
+  await dbDeleteConta(id); contas=contas.filter(x=>x.id!==id);
+  toast('Pago e lançado ✓'); renderAll();
 }
-function receberConta(id) {
+async function receberConta(id) {
   const c=contas.find(x=>x.id===id); if(!c) return;
-  lancamentos.push({id:nextId++,tipo:'receita',desc:c.desc,valor:c.valor,dia:c.dia,mes:c.mes,ano:c.ano,cat:'Contrato mensal',status:'Pago',obs:'Da conta',recorrente:false});
-  contas=contas.filter(x=>x.id!==id); save(); toast('Recebido e lançado ✓'); renderAll();
+  const lanc={tipo:'receita',desc:c.desc,valor:c.valor,dia:c.dia,mes:c.mes,ano:c.ano,cat:'Contrato mensal',status:'Pago',obs:'Da conta',recorrente:false};
+  const newId=await dbInsertLanc(lanc); if(newId){lanc.id=newId;lancamentos.push(lanc);}
+  await dbDeleteConta(id); contas=contas.filter(x=>x.id!==id);
+  toast('Recebido e lançado ✓'); renderAll();
 }
-function delConta(id){ contas=contas.filter(x=>x.id!==id); save(); renderAll(); }
+async function delConta(id){await dbDeleteConta(id);contas=contas.filter(x=>x.id!==id);renderAll();}
 
 // ═══ EQUIPE ════════════════════════════════════
-function salvarColab() {
+async function salvarColab() {
   const nome=el('col-nome').value.trim(), func=el('col-func').value.trim();
   const valor=parseFloat(el('col-valor').value)||0, venc=el('col-venc').value.trim();
-  if(!nome||!func){ toast('Nome e função obrigatórios',true); return; }
-  equipe.push({id:nextId++,nome,func,valor,venc});
-  save(); closeModal('modal-colab');
+  if(!nome||!func){toast('Nome e função obrigatórios',true);return;}
+  const obj={nome,func,valor,venc};
+  const newId=await dbInsertColab(obj); if(newId){obj.id=newId;equipe.push(obj);}
+  closeModal('modal-colab');
   ['col-nome','col-func','col-valor','col-venc'].forEach(id=>el(id).value='');
   toast('Colaborador adicionado ✓'); renderAll();
 }
-function delColab(id){ equipe=equipe.filter(x=>x.id!==id); save(); renderAll(); }
+async function delColab(id){await dbDeleteColab(id);equipe=equipe.filter(x=>x.id!==id);renderAll();}
 
 // ═══ HELPERS ═══════════════════════════════════
 function getMes(){ return parseInt(el('sel-mes').value); }
@@ -1020,6 +1069,7 @@ function renderDashboard() {
   }));
   const barsEl=el('chart-bars');
   barsEl.innerHTML='';
+  const BAR_H = 108;
   MESES.forEach((lbl,i)=>{
     const m=i+1;
     const r=lAno.filter(l=>l.tipo==='receita'&&l.status==='Pago'&&l.mes===m).reduce((s,l)=>s+l.valor,0);
@@ -1030,12 +1080,13 @@ function renderDashboard() {
     const col=document.createElement('div'); col.className='bar-col';
     if(isCur){ col.style.outline='2px solid var(--border2)'; col.style.borderRadius='6px'; col.style.padding='2px'; }
     const grp=document.createElement('div'); grp.className='bar-group';
+    const w='calc(33% - 1px)';
     const bR=document.createElement('div'); bR.className='bar-seg';
-    bR.style.cssText='height:'+Math.max(hR,r>0?3:0)+'px;background:var(--green);opacity:'+(r>0?.82:.1);
+    bR.style.cssText='width:'+w+';height:'+Math.round(Math.max(hR,r>0?3:0))+'px;background:var(--green);opacity:'+(r>0?.82:.1)+';flex:none';
     const bD=document.createElement('div'); bD.className='bar-seg';
-    bD.style.cssText='height:'+Math.max(hD,d>0?3:0)+'px;background:var(--red);opacity:'+(d>0?.78:.1);
+    bD.style.cssText='width:'+w+';height:'+Math.round(Math.max(hD,d>0?3:0))+'px;background:var(--red);opacity:'+(d>0?.78:.1)+';flex:none';
     const bI=document.createElement('div'); bI.className='bar-seg';
-    bI.style.cssText='height:'+Math.max(hI,inv>0?3:0)+'px;background:var(--purple);opacity:'+(inv>0?.72:.1);
+    bI.style.cssText='width:'+w+';height:'+Math.round(Math.max(hI,inv>0?3:0))+'px;background:var(--purple);opacity:'+(inv>0?.72:.1)+';flex:none';
     grp.appendChild(bR); grp.appendChild(bD); grp.appendChild(bI);
     const lbEl=document.createElement('div'); lbEl.className='bar-lbl-bottom';
     lbEl.style.color=isCur?'var(--text)':'var(--text3)';
@@ -1250,15 +1301,12 @@ function renderAll() {
 }
 
 // ═══ INIT ══════════════════════════════════════
-(function init(){
-  checkAuth();
-  load();
+(async function init(){
   el('sel-mes').value=CUR_MES;
   el('nl-mes').value=CUR_MES;
   el('nc-mes').value=CUR_MES;
-  // esconder optgroups desnecessários
   setNLTipo('receita');
-  renderAll();
+  await checkAuth();
 })();
 </script>
 </body>
