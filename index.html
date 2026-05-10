@@ -1302,8 +1302,10 @@ function renderContas() {
   el('tb-receber').innerHTML=receber.map(c=>rowC(c,false)).join('')||'<tr><td colspan="4"><div class="empty"><div class="empty-text">Nenhuma conta a receber</div></div></td></tr>';
   el('cnt-pagar').textContent=fmt(pagar.reduce((s,c)=>s+c.valor,0));
   el('cnt-receber').textContent=fmt(receber.reduce((s,c)=>s+c.valor,0));
+  const hoje1 = new Date().toISOString().split('T')[0];
+  const vencidas1 = contas.filter(c=>c.ano+'-'+String(c.mes).padStart(2,'0')+'-'+String(c.dia).padStart(2,'0') < hoje1).length;
   const badge=el('sb-badge-contas');
-  badge.textContent=contas.length; badge.style.display=contas.length>0?'':'none';
+  badge.textContent=vencidas1; badge.style.display=vencidas1>0?'':'none';
 }
 
 // ═══ EQUIPE ════════════════════════════════════
@@ -1422,7 +1424,11 @@ function renderAll() {
   if(currentScreen==='equipe')      renderEquipe();
   if(currentScreen==='relatorio')   renderRelatorio();
   const b=el('sb-badge-contas');
-  if(b){ b.textContent=contas.length; b.style.display=contas.length>0?'':'none'; }
+  if(b){
+    const hoje2 = new Date().toISOString().split('T')[0];
+    const vencidas2 = contas.filter(c=>c.ano+'-'+String(c.mes).padStart(2,'0')+'-'+String(c.dia).padStart(2,'0') < hoje2).length;
+    b.textContent=vencidas2; b.style.display=vencidas2>0?'':'none';
+  }
 }
 
 // ═══ INIT ══════════════════════════════════════
