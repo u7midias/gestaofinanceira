@@ -556,7 +556,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 <div class="modal-wrap" id="modal-novo">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Novo lançamento</div>
+      <div class="modal-title" id="modal-novo-title">Novo lançamento</div>
       <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-novo')">✕</button>
     </div>
     <div class="modal-body">
@@ -645,8 +645,8 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-novo')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarLancamento()">Salvar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-novo');resetModalNovo()">Cancelar</button>
+      <button class="btn btn-primary" id="modal-novo-save-btn" onclick="salvarLancamento()">Salvar</button>
     </div>
   </div>
 </div>
@@ -1042,6 +1042,36 @@ function atualizarResumoRec() {
   }
 }
 
+let editandoId = null;
+
+function editarLanc(id) {
+  const l = lancamentos.find(x=>x.id===id);
+  if(!l) return;
+  editandoId = id;
+  setNLTipo(l.tipo);
+  el('nl-desc').value   = l.desc  || '';
+  el('nl-valor').value  = l.valor || '';
+  el('nl-dia').value    = l.dia   || '';
+  el('nl-mes').value    = l.mes   || '';
+  el('nl-ano').value    = l.ano   || '';
+  el('nl-cat').value    = l.cat   || '';
+  el('nl-status').value = l.status|| 'Pendente';
+  el('nl-obs').value    = l.obs   || '';
+  el('nl-recorrente').checked = false;
+  el('nl-rec-toggle-wrap').style.display = 'none';
+  toggleRecFields();
+  el('modal-novo-title').textContent      = 'Editar lançamento';
+  el('modal-novo-save-btn').textContent   = 'Salvar alterações';
+  openModal('modal-novo');
+}
+
+function resetModalNovo() {
+  editandoId = null;
+  el('modal-novo-title').textContent    = 'Novo lançamento';
+  el('modal-novo-save-btn').textContent = 'Salvar';
+  el('nl-rec-toggle-wrap').style.display = 'flex';
+}
+
 async function salvarLancamento() {
   const desc  = el('nl-desc').value.trim();
   const valor = parseFloat(el('nl-valor').value);
@@ -1053,8 +1083,25 @@ async function salvarLancamento() {
   const obs   = el('nl-obs').value.trim();
   const isRec = el('nl-recorrente').checked;
   if(!desc||!valor||valor<=0){ toast('Preencha descrição e valor',true); return; }
-  const btn=document.querySelector('#modal-novo .modal-footer .btn-primary');
+  const btn=el('modal-novo-save-btn');
   if(btn){btn.textContent='Salvando...';btn.disabled=true;}
+
+  // MODO EDIÇÃO
+  if(editandoId) {
+    const { error } = await sb.from('lancamentos').update({
+      descricao:desc, tipo:nlTipo, valor, dia:dia||null,
+      mes, ano, cat:cat||null, status, obs:obs||null
+    }).eq('id', editandoId);
+    if(btn){btn.textContent='Salvar alterações';btn.disabled=false;}
+    if(error){ toast('Erro ao editar: '+error.message,true); return; }
+    toast('Lançamento atualizado ✓');
+    closeModal('modal-novo'); resetModalNovo();
+    ['nl-desc','nl-valor','nl-dia','nl-obs'].forEach(id=>el(id).value='');
+    el('nl-recorrente').checked=false; toggleRecFields();
+    await carregarDados(); renderAll();
+    return;
+  }
+
   if(isRec) {
     const ateMes = parseInt(el('nl-rec-mes').value);
     const ateAno  = parseInt(el('nl-rec-ano').value);
@@ -1274,7 +1321,10 @@ function renderLancamentos() {
     +'<td>'+tipoTag(l)+'</td>'
     +'<td>'+statusBtn(l)+'</td>'
     +valorCell(l)
-    +'<td style="text-align:right"><button class="btn btn-ghost btn-icon btn-sm" onclick="delLanc(\''+l.id+'\')" style="font-size:12px">✕</button></td>'
+    +'<td style="text-align:right;white-space:nowrap">'
+    +'<button class="btn btn-ghost btn-icon btn-sm" onclick="editarLanc(\''+l.id+'\')" style="font-size:13px;margin-right:2px" title="Editar">✎</button>'
+    +'<button class="btn btn-ghost btn-icon btn-sm" onclick="delLanc(\''+l.id+'\')" style="font-size:12px" title="Excluir">✕</button>'
+    +'</td>'
     +'</tr>').join('')
     ||'<tr><td colspan="7"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nenhum lançamento encontrado</div></div></td></tr>';
 
