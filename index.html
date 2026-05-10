@@ -380,7 +380,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
         <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
       </select>
       <select id="sel-ano" style="font-size:13px;border:1px solid var(--border2);border-radius:var(--r-sm);padding:5px 10px;background:var(--surface);font-family:var(--font);outline:none" onchange="renderAll()">
-        <option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2028</option><option>2029</option>
+        <option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option>
       </select>
       <button class="icon-btn" onclick="exportCSV()" title="Exportar CSV">⬇</button>
     </div>
@@ -580,7 +580,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
           <select id="nl-mes" onchange="atualizarResumoRec()"><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select>
         </div>
         <div class="form-group w-auto" style="width:82px"><label>Ano</label>
-          <select id="nl-ano"><option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2028</option><option>2029</option></select>
+          <select id="nl-ano"><option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option></select>
         </div>
       </div>
 
@@ -622,9 +622,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
             </select>
           </div>
           <div class="form-group w-auto" style="width:90px"><label>Ano</label>
-            <select id="nl-rec-ano" onchange="atualizarResumoRec()">
-              <option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option>
-            </select>
+            <select id="nl-rec-ano" onchange="atualizarResumoRec()"><option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option></select>
           </div>
         </div>
         <div id="nl-rec-resumo" style="margin-top:6px;font-size:11px;color:var(--blue);padding:0 2px;font-weight:600"></div>
