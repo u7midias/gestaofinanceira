@@ -577,7 +577,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
         <div class="form-group"><label>Valor (R$)</label><input type="number" id="nl-valor" placeholder="0,00" step="0.01" min="0"></div>
         <div class="form-group w-auto" style="width:70px"><label>Dia</label><input type="number" id="nl-dia" placeholder="1" min="1" max="31"></div>
         <div class="form-group"><label>Mês</label>
-          <select id="nl-mes"><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select>
+          <select id="nl-mes" onchange="atualizarResumoRec()"><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select>
         </div>
         <div class="form-group w-auto" style="width:82px"><label>Ano</label>
           <select id="nl-ano"><option>2023</option><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option></select>
@@ -616,27 +616,19 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
       <!-- Campos recorrência -->
       <div id="nl-rec-fields" style="display:none">
         <div class="rec-fields">
-          <div class="form-group">
-            <label>Repetir até</label>
-            <select id="nl-rec-preset" onchange="setRecPreset(this.value)" style="margin-bottom:8px">
-              <option value="">— escolher período —</option>
-              <option value="fim_ano">Fim do ano atual</option>
-              <option value="12meses">12 meses</option>
-              <option value="24meses">24 meses</option>
-              <option value="personalizado">Personalizado</option>
+          <div class="form-group"><label>Repetir até — mês</label>
+            <select id="nl-rec-mes" onchange="atualizarResumoRec()">
+              <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+            </select>
+          </div>
+          <div class="form-group w-auto" style="width:90px"><label>Ano</label>
+            <select id="nl-rec-ano" onchange="atualizarResumoRec()">
+              <option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option>
             </select>
           </div>
         </div>
-        <div id="nl-rec-custom" style="display:none" class="rec-fields">
-          <div class="form-group"><label>Mês final</label>
-            <select id="nl-rec-mes"><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select>
-          </div>
-          <div class="form-group w-auto" style="width:90px"><label>Ano final</label>
-            <select id="nl-rec-ano"><option>2025</option><option>2026</option><option>2027</option><option>2028</option></select>
-          </div>
-        </div>
-        <div id="nl-rec-resumo" style="display:none;margin-top:6px;font-size:11px;color:var(--blue);padding:0 2px;font-weight:600"></div>
-        <div style="margin-top:6px;font-size:11px;color:var(--text2);padding:0 2px">
+        <div id="nl-rec-resumo" style="margin-top:6px;font-size:11px;color:var(--blue);padding:0 2px;font-weight:600"></div>
+        <div style="margin-top:4px;font-size:11px;color:var(--text2);padding:0 2px">
           ⚠ Cada parcela fica como <strong>Pendente</strong>. Marque como pago mês a mês.
         </div>
       </div>
@@ -1032,39 +1024,23 @@ function setLancFiltro(f) {
   renderLancamentos();
 }
 
-function setRecPreset(val) {
-  const custom = el('nl-rec-custom');
-  const resumo = el('nl-rec-resumo');
-  custom.style.display = val === 'personalizado' ? 'flex' : 'none';
-
+function atualizarResumoRec() {
   const mesInicio = parseInt(el('nl-mes').value);
   const anoInicio = parseInt(el('nl-ano').value);
-  const now = new Date();
-  let ateMes, ateAno, qtd;
-
-  if(val === 'fim_ano') {
-    ateMes = 12; ateAno = anoInicio;
-    qtd = 12 - mesInicio + 1;
-  } else if(val === '12meses') {
-    const d = new Date(anoInicio, mesInicio - 1 + 11);
-    ateMes = d.getMonth() + 1; ateAno = d.getFullYear();
-    qtd = 12;
-  } else if(val === '24meses') {
-    const d = new Date(anoInicio, mesInicio - 1 + 23);
-    ateMes = d.getMonth() + 1; ateAno = d.getFullYear();
-    qtd = 24;
-  } else {
-    resumo.style.display = 'none';
-    return;
-  }
-
-  // Setar os selects ocultos com os valores calculados
-  if(el('nl-rec-mes')) el('nl-rec-mes').value = ateMes;
-  if(el('nl-rec-ano')) el('nl-rec-ano').value = ateAno;
-
+  const ateMes   = parseInt(el('nl-rec-mes').value);
+  const ateAno   = parseInt(el('nl-rec-ano').value);
+  const resumo   = el('nl-rec-resumo');
+  if(!mesInicio || !anoInicio || !ateMes || !ateAno) { resumo.textContent=''; return; }
+  // calcular quantidade de parcelas
+  const total = (ateAno - anoInicio) * 12 + (ateMes - mesInicio) + 1;
   const MESES_F = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  resumo.style.display = 'block';
-  resumo.textContent = '→ ' + qtd + ' parcela(s) — até ' + MESES_F[ateMes-1] + '/' + ateAno;
+  if(total <= 0) {
+    resumo.style.color = 'var(--red)';
+    resumo.textContent = '⚠ O mês final deve ser igual ou posterior ao mês inicial.';
+  } else {
+    resumo.style.color = 'var(--blue)';
+    resumo.textContent = '→ ' + total + ' parcela(s) — de ' + MESES_F[mesInicio-1] + '/' + anoInicio + ' até ' + MESES_F[ateMes-1] + '/' + ateAno;
+  }
 }
 
 async function salvarLancamento() {
@@ -1081,16 +1057,11 @@ async function salvarLancamento() {
   const btn=document.querySelector('#modal-novo .modal-footer .btn-primary');
   if(btn){btn.textContent='Salvando...';btn.disabled=true;}
   if(isRec) {
-    const preset = el('nl-rec-preset').value;
-    let ateMes, ateAno;
-    if(preset === 'personalizado' || preset === '') {
-      ateMes = parseInt(el('nl-rec-mes').value);
-      ateAno = parseInt(el('nl-rec-ano').value);
-    } else {
-      ateMes = parseInt(el('nl-rec-mes').value);
-      ateAno = parseInt(el('nl-rec-ano').value);
-    }
-    if(!ateMes || !ateAno){ toast('Escolha o período da recorrência',true); return; }
+    const ateMes = parseInt(el('nl-rec-mes').value);
+    const ateAno  = parseInt(el('nl-rec-ano').value);
+    const totalParcelas = (ateAno - parseInt(el('nl-ano').value)) * 12 + (ateMes - parseInt(el('nl-mes').value)) + 1;
+    if(!ateMes || !ateAno){ toast('Escolha o mês e ano final',true); return; }
+    if(totalParcelas <= 0){ toast('O mês final deve ser posterior ao inicial',true); return; }
     let cm=mes,ca=ano,count=0; const rows=[];
     while((ca<ateAno)||(ca===ateAno&&cm<=ateMes)){
       rows.push(lancToDb({tipo:nlTipo,desc,valor,dia,mes:cm,ano:ca,cat,status:'Pendente',obs,recorrente:true}));
@@ -1110,9 +1081,7 @@ async function salvarLancamento() {
   closeModal('modal-novo');
   ['nl-desc','nl-valor','nl-dia','nl-obs'].forEach(id=>el(id).value='');
   el('nl-recorrente').checked=false;
-  if(el('nl-rec-preset')) el('nl-rec-preset').value='';
-  if(el('nl-rec-resumo')) { el('nl-rec-resumo').style.display='none'; }
-  if(el('nl-rec-custom')) el('nl-rec-custom').style.display='none';
+  if(el('nl-rec-resumo')) el('nl-rec-resumo').textContent='';
   toggleRecFields();
   await carregarDados(); renderAll();
 }
