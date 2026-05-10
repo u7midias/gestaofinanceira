@@ -516,10 +516,11 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
     <!-- RELATÓRIO -->
     <div class="screen" id="sc-relatorio">
       <div class="page-header"><div class="page-title">Relatório</div><div class="page-sub">Análise completa e previsão</div></div>
-      <div class="grid-4" style="margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px">
         <div class="kpi-card"><div class="kpi-label">Receita anual</div><div class="kpi-value g" id="rel-rec">—</div></div>
         <div class="kpi-card"><div class="kpi-label">Despesas anuais</div><div class="kpi-value r" id="rel-des">—</div></div>
         <div class="kpi-card"><div class="kpi-label">Lucro anual</div><div class="kpi-value" id="rel-luc">—</div><div class="kpi-footer" id="rel-marg"></div></div>
+        <div class="kpi-card"><div class="kpi-label">Total investido</div><div class="kpi-value p" id="rel-inv">—</div><div class="kpi-footer" id="rel-inv-f"></div></div>
         <div class="kpi-card"><div class="kpi-label">Ticket médio</div><div class="kpi-value b" id="rel-ticket">—</div><div class="kpi-footer" id="rel-ticket-f"></div></div>
       </div>
       <div class="grid-2" style="margin-bottom:16px;align-items:start">
@@ -1391,6 +1392,8 @@ function renderRelatorio() {
   el('rel-luc').textContent=fmtK(lucA);
   el('rel-luc').className='kpi-value '+(lucA>=0?'g':'r');
   el('rel-marg').textContent='margem '+marg+'%';
+  el('rel-inv').textContent=fmtK(invA);
+  el('rel-inv-f').textContent=lAno.filter(l=>l.tipo==='investimento'&&l.status==='Pago').length+' investimento(s)';
   el('rel-ticket').textContent=fmtK(ticket);
   el('rel-ticket-f').textContent=recL.length+' recebimentos';
 
