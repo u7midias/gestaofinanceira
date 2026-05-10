@@ -901,12 +901,14 @@ async function dbInsertLanc(l) {
 // UPDATE status lançamento
 async function dbUpdateStatus(id, status) {
   const { error } = await sb.from('lancamentos').update({status}).eq('id',id);
-  if(error){ toast('Erro ao atualizar',true); }
+  if(error){ toast('Erro ao atualizar: '+error.message,true); return false; }
+  return true;
 }
 // DELETE lançamento
 async function dbDeleteLanc(id) {
   const { error } = await sb.from('lancamentos').delete().eq('id',id);
-  if(error){ toast('Erro ao remover',true); }
+  if(error){ toast('Erro ao remover: '+error.message,true); return false; }
+  return true;
 }
 // INSERT conta
 async function dbInsertConta(c) {
@@ -918,7 +920,8 @@ async function dbInsertConta(c) {
 // DELETE conta
 async function dbDeleteConta(id) {
   const { error } = await sb.from('contas').delete().eq('id',id);
-  if(error){ toast('Erro ao remover conta',true); }
+  if(error){ toast('Erro ao remover conta: '+error.message,true); return false; }
+  return true;
 }
 // INSERT colab
 async function dbInsertColab(e) {
@@ -930,7 +933,8 @@ async function dbInsertColab(e) {
 // DELETE colab
 async function dbDeleteColab(id) {
   const { error } = await sb.from('equipe').delete().eq('id',id);
-  if(error){ toast('Erro ao remover',true); }
+  if(error){ toast('Erro ao remover: '+error.message,true); return false; }
+  return true;
 }
 
 // ═══ FORMATAÇÃO ═══════════════════════════════
@@ -1121,7 +1125,7 @@ function tipoTag(l) {
 
 function statusBtn(l) {
   const cls = l.status==='Pago' ? 'badge-g' : 'badge-a';
-  return '<button class="badge '+cls+'" onclick="toggleStatus('+l.id+')" style="cursor:pointer;border:none;font-family:var(--font)" title="Clique para alternar status">'+l.status+'</button>';
+  return '<button class="badge '+cls+'" onclick="toggleStatus(\''+l.id+'\')" style="cursor:pointer;border:none;font-family:var(--font)" title="Clique para alternar status">'+l.status+'</button>';
 }
 
 function valorCell(l) {
@@ -1242,7 +1246,7 @@ function renderLancamentos() {
     +'<td>'+tipoTag(l)+'</td>'
     +'<td>'+statusBtn(l)+'</td>'
     +valorCell(l)
-    +'<td style="text-align:right"><button class="btn btn-ghost btn-icon btn-sm" onclick="delLanc('+l.id+')" style="font-size:12px">✕</button></td>'
+    +'<td style="text-align:right"><button class="btn btn-ghost btn-icon btn-sm" onclick="delLanc(\''+l.id+'\')" style="font-size:12px">✕</button></td>'
     +'</tr>').join('')
     ||'<tr><td colspan="7"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nenhum lançamento encontrado</div></div></td></tr>';
 
@@ -1260,12 +1264,12 @@ function renderContas() {
     const vd=c.ano+'-'+String(c.mes).padStart(2,'0')+'-'+String(c.dia).padStart(2,'0');
     const vencido=vd<hoje;
     const action=isPagar
-      ?'<button class="btn btn-ghost btn-sm" onclick="pagarConta('+c.id+')" style="font-size:11px;color:var(--green)">Pagar</button>'
-      :'<button class="btn btn-ghost btn-sm" onclick="receberConta('+c.id+')" style="font-size:11px;color:var(--green)">Receber</button>';
+      ?'<button class="btn btn-ghost btn-sm" onclick="pagarConta(\''+c.id+'\')" style="font-size:11px;color:var(--green)">Pagar</button>'
+      :'<button class="btn btn-ghost btn-sm" onclick="receberConta(\''+c.id+'\')" style="font-size:11px;color:var(--green)">Receber</button>';
     return '<tr><td><div class="td-bold">'+c.desc+'</div><span class="badge '+(vencido?'badge-r':'badge-a')+'">'+(vencido?'Vencido':'Pendente')+'</span></td>'
       +'<td class="td-muted" style="font-size:12px">'+fmtData(c.dia,c.mes,c.ano)+'</td>'
       +'<td class="td-num '+(isPagar?'td-red':'td-green')+'">'+fmt(c.valor)+'</td>'
-      +'<td style="text-align:right;white-space:nowrap">'+action+'<button class="btn btn-ghost btn-icon btn-sm" onclick="delConta('+c.id+')" style="font-size:12px;margin-left:4px">✕</button></td></tr>';
+      +'<td style="text-align:right;white-space:nowrap">'+action+'<button class="btn btn-ghost btn-icon btn-sm" onclick="delConta(\''+c.id+'\')" style="font-size:12px;margin-left:4px">✕</button></td></tr>';
   };
   el('tb-pagar').innerHTML=pagar.map(c=>rowC(c,true)).join('')||'<tr><td colspan="4"><div class="empty"><div class="empty-text">Nenhuma conta a pagar</div></div></td></tr>';
   el('tb-receber').innerHTML=receber.map(c=>rowC(c,false)).join('')||'<tr><td colspan="4"><div class="empty"><div class="empty-text">Nenhuma conta a receber</div></div></td></tr>';
@@ -1286,7 +1290,7 @@ function renderEquipe() {
     +'<td class="td-muted">'+e.func+'</td>'
     +'<td class="td-muted" style="font-size:12px">'+e.venc+'</td>'
     +'<td class="td-num td-red">'+fmt(e.valor)+'</td>'
-    +'<td style="text-align:right"><button class="btn btn-ghost btn-icon btn-sm" onclick="delColab('+e.id+')" style="font-size:12px">✕</button></td>'
+    +'<td style="text-align:right"><button class="btn btn-ghost btn-icon btn-sm" onclick="delColab(\''+e.id+'\')" style="font-size:12px">✕</button></td>'
     +'</tr>').join('')
     ||'<tr><td colspan="5"><div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Nenhum colaborador</div></div></td></tr>';
 }
