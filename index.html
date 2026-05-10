@@ -299,7 +299,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
       <div class="login-logo-mark">GF</div>
       <div>
         <div class="login-logo-name">Gestão Financeira</div>
-        <div class="login-logo-sub">Controle para empresas</div>
+        <div class="login-logo-sub">Agência de Marketing</div>
       </div>
     </div>
 
@@ -590,13 +590,13 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
           <select id="nl-cat">
             <option value="">— selecionar —</option>
             <optgroup label="Receitas" id="nl-cat-receita">
-              <option>Contrato mensal</option><option>Projeto pontual</option><option>Consultoria</option><option>Licença / SaaS</option><option>Outros</option>
+              <option>Venda de produto</option><option>Prestação de serviço</option><option>Contrato / Mensalidade</option><option>Comissão</option><option>Consultoria</option><option>Locação / Aluguel</option><option>Outras receitas</option>
             </optgroup>
             <optgroup label="Despesas" id="nl-cat-despesa">
-              <option>Pessoal / Salários</option><option>Freelancers</option><option>Ferramentas / Software</option><option>Tráfego pago</option><option>Produção de conteúdo</option><option>Aluguel / Escritório</option><option>Contabilidade</option><option>Impostos / Taxas</option><option>Outros</option>
+              <option>Pessoal / Salários</option><option>Aluguel / Espaço</option><option>Fornecedores</option><option>Marketing / Publicidade</option><option>Impostos / Taxas</option><option>Contabilidade / Juridico</option><option>Utilities (água, luz, internet)</option><option>Transporte / Logística</option><option>Outras despesas</option>
             </optgroup>
             <optgroup label="Investimentos" id="nl-cat-investimento">
-              <option>Equipamentos</option><option>Capacitação / Cursos</option><option>Infraestrutura</option><option>Software / Licença</option><option>Outros</option>
+              <option>Equipamentos / Máquinas</option><option>Tecnologia / Software</option><option>Capacitação / Cursos</option><option>Reformas / Infraestrutura</option><option>Outros investimentos</option>
             </optgroup>
           </select>
         </div>
@@ -822,12 +822,13 @@ async function doLogout() {
 const MESES   = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MESES_F = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const CAT_COLORS = {
-  'Contrato mensal':'#2A7A4B','Projeto pontual':'#1A7A6A','Consultoria':'#6D3FA8','Licença / SaaS':'#1A5FA8',
-  'Pessoal / Salários':'#C0392B','Freelancers':'#A03050','Ferramentas / Software':'#1A5FA8',
-  'Tráfego pago':'#A05C00','Produção de conteúdo':'#6D3FA8','Aluguel / Escritório':'#5A5A5A',
-  'Contabilidade':'#3A6A8A','Impostos / Taxas':'#7A3F1A',
-  'Equipamentos':'#6D3FA8','Capacitação / Cursos':'#1A7A6A','Infraestrutura':'#3A6A8A',
-  'Outros':'#888'
+  'Venda de produto':'#2A7A4B','Prestação de serviço':'#1A7A6A','Contrato / Mensalidade':'#1A5FA8',
+  'Comissão':'#6D3FA8','Consultoria':'#4A6A2B','Locação / Aluguel':'#3A6A8A','Outras receitas':'#888',
+  'Pessoal / Salários':'#C0392B','Aluguel / Espaço':'#5A5A5A','Fornecedores':'#A03050',
+  'Marketing / Publicidade':'#A05C00','Impostos / Taxas':'#7A3F1A','Contabilidade / Juridico':'#3A6A8A',
+  'Utilities (água, luz, internet)':'#1A6A6A','Transporte / Logística':'#6A4A1A','Outras despesas':'#888',
+  'Equipamentos / Máquinas':'#6D3FA8','Tecnologia / Software':'#1A5FA8','Capacitação / Cursos':'#1A7A6A',
+  'Reformas / Infraestrutura':'#5A4A2A','Outros investimentos':'#888'
 };
 const AVATAR_BG  = ['#E8F0FE','#FEE8E8','#E8FEF0','#FEF3E2','#F0E8FE'];
 const AVATAR_COL = ['#1A5FA8','#C0392B','#2A7A4B','#A05C00','#6D3FA8'];
