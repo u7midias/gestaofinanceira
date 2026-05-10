@@ -1302,8 +1302,11 @@ function renderContas() {
   el('tb-receber').innerHTML=receber.map(c=>rowC(c,false)).join('')||'<tr><td colspan="4"><div class="empty"><div class="empty-text">Nenhuma conta a receber</div></div></td></tr>';
   el('cnt-pagar').textContent=fmt(pagar.reduce((s,c)=>s+c.valor,0));
   el('cnt-receber').textContent=fmt(receber.reduce((s,c)=>s+c.valor,0));
-  const hoje1 = new Date().toISOString().split('T')[0];
-  const vencidas1 = contas.filter(c=>c.ano+'-'+String(c.mes).padStart(2,'0')+'-'+String(c.dia).padStart(2,'0') < hoje1).length;
+  const hoje1 = new Date(); hoje1.setHours(0,0,0,0);
+  const vencidas1 = contas.filter(c=>{
+    const d = new Date(c.ano, c.mes-1, c.dia||1);
+    return d < hoje1;
+  }).length;
   const badge=el('sb-badge-contas');
   badge.textContent=vencidas1; badge.style.display=vencidas1>0?'':'none';
 }
@@ -1425,14 +1428,19 @@ function renderAll() {
   if(currentScreen==='relatorio')   renderRelatorio();
   const b=el('sb-badge-contas');
   if(b){
-    const hoje2 = new Date().toISOString().split('T')[0];
-    const vencidas2 = contas.filter(c=>c.ano+'-'+String(c.mes).padStart(2,'0')+'-'+String(c.dia).padStart(2,'0') < hoje2).length;
+    const hoje2 = new Date(); hoje2.setHours(0,0,0,0);
+    const vencidas2 = contas.filter(c=>{
+      const d = new Date(c.ano, c.mes-1, c.dia||1);
+      return d < hoje2;
+    }).length;
     b.textContent=vencidas2; b.style.display=vencidas2>0?'':'none';
   }
 }
 
 // ═══ INIT ══════════════════════════════════════
 (async function init(){
+  // Limpar dados antigos do localStorage que possam interferir
+  try { localStorage.removeItem('gf2_lanc'); localStorage.removeItem('gf2_contas'); localStorage.removeItem('gf2_equipe'); } catch(e){}
   el('sel-mes').value=CUR_MES;
   el('nl-mes').value=CUR_MES;
   el('nc-mes').value=CUR_MES;
