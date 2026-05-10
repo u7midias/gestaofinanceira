@@ -823,6 +823,7 @@ async function checkAuth() {
     const emailEl=el('sb-email-user');
     if(emailEl) emailEl.textContent=session.user.email;
     await carregarDados();
+    atualizarBadgeContas();
     renderAll();
   }
 }
@@ -1302,13 +1303,7 @@ function renderContas() {
   el('tb-receber').innerHTML=receber.map(c=>rowC(c,false)).join('')||'<tr><td colspan="4"><div class="empty"><div class="empty-text">Nenhuma conta a receber</div></div></td></tr>';
   el('cnt-pagar').textContent=fmt(pagar.reduce((s,c)=>s+c.valor,0));
   el('cnt-receber').textContent=fmt(receber.reduce((s,c)=>s+c.valor,0));
-  const hoje1 = new Date(); hoje1.setHours(0,0,0,0);
-  const vencidas1 = contas.filter(c=>{
-    const d = new Date(c.ano, c.mes-1, c.dia||1);
-    return d < hoje1;
-  }).length;
-  const badge=el('sb-badge-contas');
-  badge.textContent=vencidas1; badge.style.display=vencidas1>0?'':'none';
+  atualizarBadgeContas();
 }
 
 // ═══ EQUIPE ════════════════════════════════════
@@ -1420,21 +1415,25 @@ function exportCSV() {
 }
 
 // ═══ RENDER ALL ════════════════════════════════
+function atualizarBadgeContas() {
+  const b = el('sb-badge-contas');
+  if(!b) return;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const vencidas = contas.filter(c=>{
+    const d = new Date(Number(c.ano), Number(c.mes)-1, Number(c.dia)||1);
+    return d < hoje;
+  }).length;
+  b.textContent = vencidas;
+  b.style.display = vencidas > 0 ? '' : 'none';
+}
+
 function renderAll() {
   if(currentScreen==='dashboard')   renderDashboard();
   if(currentScreen==='lancamentos') renderLancamentos();
   if(currentScreen==='contas')      renderContas();
   if(currentScreen==='equipe')      renderEquipe();
   if(currentScreen==='relatorio')   renderRelatorio();
-  const b=el('sb-badge-contas');
-  if(b){
-    const hoje2 = new Date(); hoje2.setHours(0,0,0,0);
-    const vencidas2 = contas.filter(c=>{
-      const d = new Date(c.ano, c.mes-1, c.dia||1);
-      return d < hoje2;
-    }).length;
-    b.textContent=vencidas2; b.style.display=vencidas2>0?'':'none';
-  }
+  atualizarBadgeContas();
 }
 
 // ═══ INIT ══════════════════════════════════════
