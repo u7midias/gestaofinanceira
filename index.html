@@ -616,15 +616,28 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
       <!-- Campos recorrência -->
       <div id="nl-rec-fields" style="display:none">
         <div class="rec-fields">
-          <div class="form-group"><label>Repetir até — mês</label>
+          <div class="form-group">
+            <label>Repetir até</label>
+            <select id="nl-rec-preset" onchange="setRecPreset(this.value)" style="margin-bottom:8px">
+              <option value="">— escolher período —</option>
+              <option value="fim_ano">Fim do ano atual</option>
+              <option value="12meses">12 meses</option>
+              <option value="24meses">24 meses</option>
+              <option value="personalizado">Personalizado</option>
+            </select>
+          </div>
+        </div>
+        <div id="nl-rec-custom" style="display:none" class="rec-fields">
+          <div class="form-group"><label>Mês final</label>
             <select id="nl-rec-mes"><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select>
           </div>
-          <div class="form-group w-auto" style="width:90px"><label>Até — ano</label>
+          <div class="form-group w-auto" style="width:90px"><label>Ano final</label>
             <select id="nl-rec-ano"><option>2025</option><option>2026</option><option>2027</option><option>2028</option></select>
           </div>
         </div>
-        <div style="margin-top:6px;font-size:11px;color:var(--blue);padding:0 2px">
-          ⚠ Cada parcela fica como <strong>Pendente</strong>. Marque como pago mês a mês para contabilizar no caixa.
+        <div id="nl-rec-resumo" style="display:none;margin-top:6px;font-size:11px;color:var(--blue);padding:0 2px;font-weight:600"></div>
+        <div style="margin-top:6px;font-size:11px;color:var(--text2);padding:0 2px">
+          ⚠ Cada parcela fica como <strong>Pendente</strong>. Marque como pago mês a mês.
         </div>
       </div>
 
@@ -1019,6 +1032,41 @@ function setLancFiltro(f) {
   renderLancamentos();
 }
 
+function setRecPreset(val) {
+  const custom = el('nl-rec-custom');
+  const resumo = el('nl-rec-resumo');
+  custom.style.display = val === 'personalizado' ? 'flex' : 'none';
+
+  const mesInicio = parseInt(el('nl-mes').value);
+  const anoInicio = parseInt(el('nl-ano').value);
+  const now = new Date();
+  let ateMes, ateAno, qtd;
+
+  if(val === 'fim_ano') {
+    ateMes = 12; ateAno = anoInicio;
+    qtd = 12 - mesInicio + 1;
+  } else if(val === '12meses') {
+    const d = new Date(anoInicio, mesInicio - 1 + 11);
+    ateMes = d.getMonth() + 1; ateAno = d.getFullYear();
+    qtd = 12;
+  } else if(val === '24meses') {
+    const d = new Date(anoInicio, mesInicio - 1 + 23);
+    ateMes = d.getMonth() + 1; ateAno = d.getFullYear();
+    qtd = 24;
+  } else {
+    resumo.style.display = 'none';
+    return;
+  }
+
+  // Setar os selects ocultos com os valores calculados
+  if(el('nl-rec-mes')) el('nl-rec-mes').value = ateMes;
+  if(el('nl-rec-ano')) el('nl-rec-ano').value = ateAno;
+
+  const MESES_F = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  resumo.style.display = 'block';
+  resumo.textContent = '→ ' + qtd + ' parcela(s) — até ' + MESES_F[ateMes-1] + '/' + ateAno;
+}
+
 async function salvarLancamento() {
   const desc  = el('nl-desc').value.trim();
   const valor = parseFloat(el('nl-valor').value);
@@ -1033,8 +1081,16 @@ async function salvarLancamento() {
   const btn=document.querySelector('#modal-novo .modal-footer .btn-primary');
   if(btn){btn.textContent='Salvando...';btn.disabled=true;}
   if(isRec) {
-    const ateMes=parseInt(el('nl-rec-mes').value);
-    const ateAno=parseInt(el('nl-rec-ano').value);
+    const preset = el('nl-rec-preset').value;
+    let ateMes, ateAno;
+    if(preset === 'personalizado' || preset === '') {
+      ateMes = parseInt(el('nl-rec-mes').value);
+      ateAno = parseInt(el('nl-rec-ano').value);
+    } else {
+      ateMes = parseInt(el('nl-rec-mes').value);
+      ateAno = parseInt(el('nl-rec-ano').value);
+    }
+    if(!ateMes || !ateAno){ toast('Escolha o período da recorrência',true); return; }
     let cm=mes,ca=ano,count=0; const rows=[];
     while((ca<ateAno)||(ca===ateAno&&cm<=ateMes)){
       rows.push(lancToDb({tipo:nlTipo,desc,valor,dia,mes:cm,ano:ca,cat,status:'Pendente',obs,recorrente:true}));
@@ -1053,7 +1109,11 @@ async function salvarLancamento() {
   if(btn){btn.textContent='Salvar';btn.disabled=false;}
   closeModal('modal-novo');
   ['nl-desc','nl-valor','nl-dia','nl-obs'].forEach(id=>el(id).value='');
-  el('nl-recorrente').checked=false; toggleRecFields();
+  el('nl-recorrente').checked=false;
+  if(el('nl-rec-preset')) el('nl-rec-preset').value='';
+  if(el('nl-rec-resumo')) { el('nl-rec-resumo').style.display='none'; }
+  if(el('nl-rec-custom')) el('nl-rec-custom').style.display='none';
+  toggleRecFields();
   await carregarDados(); renderAll();
 }
 
