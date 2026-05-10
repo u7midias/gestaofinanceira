@@ -714,7 +714,15 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 // ═══ SUPABASE ══════════════════════════════════
 const SUPA_URL  = 'https://fotssarkgylorfahkwaa.supabase.co';
 const SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvdHNzYXJrZ3lsb3JmYWhrd2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NjIwMjIsImV4cCI6MjA5MTMzODAyMn0.Gel8RLs8Wqr6LX6A9zvJtP0MMgrvQtgbfsvKQDmHJco';
-const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
+  auth: {
+    persistSession: true,
+    storageKey: 'gf-auth',
+    storage: window.localStorage,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+  }
+});
 
 // ═══ LOGIN / CADASTRO ══════════════════════════
 let loginModo = 'entrar';
@@ -747,13 +755,16 @@ function loginShake(inputId, msg) {
   },70);
 }
 
-function entrarNoApp(email) {
+async function entrarNoApp(email) {
   el('login-screen').style.display='none';
   const emailEl=el('sb-email-user');
   if(emailEl) emailEl.textContent=email;
   const nomeEl=el('sb-nome-empresa');
   if(nomeEl && el('login-nome') && el('login-nome').value.trim())
     nomeEl.textContent=el('login-nome').value.trim();
+  // cachear user_id
+  const { data: { user } } = await sb.auth.getUser();
+  currentUserId = user?.id || null;
 }
 
 async function doLogin() {
@@ -805,6 +816,7 @@ async function checkAuth() {
   const { data: { session } } = await sb.auth.getSession();
   if(session){
     el('login-screen').style.display='none';
+    currentUserId = session.user.id;
     const emailEl=el('sb-email-user');
     if(emailEl) emailEl.textContent=session.user.email;
     await carregarDados();
@@ -814,7 +826,7 @@ async function checkAuth() {
 
 async function doLogout() {
   await sb.auth.signOut();
-  lancamentos=[]; contas=[]; equipe=[];
+  currentUserId=null; lancamentos=[]; contas=[]; equipe=[];
   location.reload();
 }
 
@@ -866,15 +878,23 @@ async function carregarDados() {
 
 // Conversores DB ↔ App
 function dbToLanc(r){ return {id:r.id,tipo:r.tipo,desc:r.descricao,valor:Number(r.valor),dia:r.dia,mes:r.mes,ano:r.ano,cat:r.cat||'',status:r.status,obs:r.obs||'',recorrente:r.recorrente}; }
-function lancToDb(l){ return {descricao:l.desc,tipo:l.tipo,valor:l.valor,dia:l.dia||null,mes:l.mes,ano:l.ano,cat:l.cat||null,status:l.status,obs:l.obs||null,recorrente:!!l.recorrente}; }
+let currentUserId = null;
+async function getUserId(){
+  if(currentUserId) return currentUserId;
+  const { data:{user} } = await sb.auth.getUser();
+  currentUserId = user?.id||null;
+  return currentUserId;
+}
+function lancToDb(l, uid){ return {user_id:uid,descricao:l.desc,tipo:l.tipo,valor:l.valor,dia:l.dia||null,mes:l.mes,ano:l.ano,cat:l.cat||null,status:l.status,obs:l.obs||null,recorrente:!!l.recorrente}; }
 function dbToConta(r){ return {id:r.id,tipo:r.tipo,desc:r.descricao,valor:Number(r.valor),dia:r.dia,mes:r.mes,ano:r.ano}; }
-function contaToDb(c){ return {descricao:c.desc,tipo:c.tipo,valor:c.valor,dia:c.dia||null,mes:c.mes,ano:c.ano}; }
+function contaToDb(c, uid){ return {user_id:uid,descricao:c.desc,tipo:c.tipo,valor:c.valor,dia:c.dia||null,mes:c.mes,ano:c.ano}; }
 function dbToColab(r){ return {id:r.id,nome:r.nome,func:r.func,valor:Number(r.valor),venc:r.venc||''}; }
-function colabToDb(e){ return {nome:e.nome,func:e.func,valor:e.valor,venc:e.venc||null}; }
+function colabToDb(e, uid){ return {user_id:uid,nome:e.nome,func:e.func,valor:e.valor,venc:e.venc||null}; }
 
 // INSERT lançamento
 async function dbInsertLanc(l) {
-  const { data, error } = await sb.from('lancamentos').insert(lancToDb(l)).select().single();
+  const uid = await getUserId();
+  const { data, error } = await sb.from('lancamentos').insert(lancToDb(l, uid)).select().single();
   if(error){ toast('Erro ao salvar: '+error.message,true); return null; }
   return data.id;
 }
@@ -890,8 +910,9 @@ async function dbDeleteLanc(id) {
 }
 // INSERT conta
 async function dbInsertConta(c) {
-  const { data, error } = await sb.from('contas').insert(contaToDb(c)).select().single();
-  if(error){ toast('Erro ao salvar conta',true); return null; }
+  const uid = await getUserId();
+  const { data, error } = await sb.from('contas').insert(contaToDb(c, uid)).select().single();
+  if(error){ toast('Erro ao salvar conta: '+error.message,true); return null; }
   return data.id;
 }
 // DELETE conta
@@ -901,8 +922,9 @@ async function dbDeleteConta(id) {
 }
 // INSERT colab
 async function dbInsertColab(e) {
-  const { data, error } = await sb.from('equipe').insert(colabToDb(e)).select().single();
-  if(error){ toast('Erro ao salvar colaborador',true); return null; }
+  const uid = await getUserId();
+  const { data, error } = await sb.from('equipe').insert(colabToDb(e, uid)).select().single();
+  if(error){ toast('Erro ao salvar colaborador: '+error.message,true); return null; }
   return data.id;
 }
 // DELETE colab
@@ -1014,6 +1036,8 @@ async function salvarLancamento() {
       rows.push(lancToDb({tipo:nlTipo,desc,valor,dia,mes:cm,ano:ca,cat,status:'Pendente',obs,recorrente:true}));
       count++; cm++; if(cm>12){cm=1;ca++;} if(count>60)break;
     }
+    const uid=await getUserId();
+    rows.forEach(r=>r.user_id=uid);
     const {error}=await sb.from('lancamentos').insert(rows);
     if(error){toast('Erro: '+error.message,true);}
     else{toast(count+' parcelas criadas como Pendente ✓');}
