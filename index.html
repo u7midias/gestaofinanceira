@@ -1753,13 +1753,30 @@ function renderSaude() {
   }).join('');
   el('s-baldes').innerHTML = cardFaturamento + baldesHTML;
 
-  // Semáforo
+  // ── Modelo de distribuição: 50% Operação / 30% Pró-labore / 10% Reinvestimento / 10% Guardar ──
+  // Metas sobre faturamento total (pago + pendente)
+  const META_OP   = 0.50; // 50% custo operacional
+  const META_PL   = 0.30; // 30% pró-labore
+  const META_REIN = 0.10; // 10% reinvestimento (empresa)
+  const META_GUAR = 0.10; // 10% investimento/guardar (reserva)
+
+  const metaOp    = fatTotal * META_OP;
+  const metaPL    = fatTotal * META_PL;
+  const metaRein  = fatTotal * META_REIN;
+  const metaGuar  = fatTotal * META_GUAR;
+
+  // % reais sobre faturamento total
+  const pOpFat  = fatTotal>0 ? desTotal/fatTotal : 0;
+  const pInvFat = fatTotal>0 ? invTotal/fatTotal : 0;
+  const pLucFat = fatTotal>0 ? lucTotal/fatTotal : 0;
+
+  // Semáforo — avaliado contra as metas do modelo
   const margem = pLuc;
-  const sOp  = pOp3 < 0.55 ? 'verde' : pOp3 < 0.80 ? 'amarelo' : 'vermelho';
-  const sMar = margem >= 0.20 ? 'verde' : margem >= 0 ? 'amarelo' : 'vermelho';
-  const sInv = pInv >= 0.05 ? 'verde' : pInv > 0 ? 'amarelo' : 'vermelho';
+  const sOp   = pOpFat <= META_OP ? 'verde' : pOpFat <= META_OP*1.2 ? 'amarelo' : 'vermelho';
+  const sMar  = margem >= 0.20 ? 'verde' : margem >= 0 ? 'amarelo' : 'vermelho';
+  const sInv  = pInvFat >= META_REIN ? 'verde' : pInvFat > 0 ? 'amarelo' : 'vermelho';
   const pendentes = recPendente;
-  const sPend = pendentes===0 ? 'verde' : pendentes < recMed*0.5 ? 'amarelo' : 'vermelho';
+  const sPend = pendentes===0 ? 'verde' : pendentes < recTotal*0.5 ? 'amarelo' : 'vermelho';
   const sContas = contas.filter(c=>{const d=new Date(c.ano,c.mes-1,c.dia||1);return d<new Date();}).length;
   const sCont = sContas===0 ? 'verde' : sContas<=2 ? 'amarelo' : 'vermelho';
 
@@ -1771,9 +1788,9 @@ function renderSaude() {
   }
 
   el('s-semaforo').innerHTML =
-    semRow(sOp,  'Custo operacional vs faturamento ('+Math.round(pOp3*100)+'%)') +
+    semRow(sOp,  'Custo operacional vs faturamento ('+Math.round(pOpFat*100)+'% — meta: 50%)') +
     semRow(sMar, 'Margem de lucro líquida ('+Math.round(margem*100)+'%)') +
-    semRow(sInv, 'Investindo na empresa ('+Math.round(pInv*100)+'%)') +
+    semRow(sInv, 'Reinvestimento na empresa ('+Math.round(pInvFat*100)+'% — meta: 10%)') +
     semRow(sPend,'Recebimentos pendentes ('+fmt(pendentes)+')') +
     semRow(sCont,'Contas vencidas ('+sContas+' conta'+(sContas!==1?'s':'')+')');
 
@@ -1794,64 +1811,143 @@ function renderSaude() {
     alertEl.textContent='⚠ Atenção: suas despesas superam as receitas em '+fmt(Math.abs(lucTotal))+'. Revise urgentemente seus gastos ou aumente o faturamento.';
   } else if(margem < 0.10 && recTotal > 0) {
     alertEl.style.display='block';
-    alertEl.textContent='⚠ Margem de lucro muito baixa ('+Math.round(margem*100)+'%). Ideal mínimo: 20%. Monitore seus custos.';
+    alertEl.textContent='⚠ Margem de lucro muito baixa ('+Math.round(margem*100)+'%). Pelo modelo 50/30/10/10, você deve manter pelo menos 20% livre após pró-labore e reinvestimento.';
   } else {
     alertEl.style.display='none';
   }
 
-  // Recomendações
+  // ── Recomendações baseadas no modelo 50/30/10/10 ──────────────────────
   const recs = [];
-  // Pró-labore sugerido — baseado em 25% do faturamento total do mês (pago + pendente)
-  const proLabore   = fatTotal * 0.25;
-  const proLaboreEl = `
-  <div style="margin-top:10px">
-    <div style="font-size:11px;color:var(--text2);margin-bottom:8px">
-      Cálculo: 25% × ${fmt(fatTotal)} (faturamento total do mês)
+
+  // Bloco principal: Distribuição sugerida do faturamento
+  const distEl = `
+  <div style="margin-top:12px">
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;padding:8px 10px;background:var(--blue-bg);border-radius:var(--r-sm);border-left:3px solid var(--blue)">
+      📐 Modelo de distribuição aplicado sobre o faturamento do mês: <strong>${fmt(fatTotal)}</strong>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div style="background:var(--green-bg);border-radius:var(--r-sm);padding:12px;text-align:center;border:1.5px solid #A7D7B8">
-        <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:4px;letter-spacing:.04em">💼 PRÓ-LABORE SUGERIDO</div>
-        <div style="font-size:20px;font-weight:800;color:var(--green);font-family:var(--mono)">${fmt(proLabore)}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">25% do faturamento mensal</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <!-- Operação 50% -->
+      <div style="background:${pOpFat<=META_OP?'var(--green-bg)':'var(--red-bg)'};border-radius:var(--r-sm);padding:12px;border:1.5px solid ${pOpFat<=META_OP?'#A7D7B8':'#E9A5A0'}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="font-size:10px;font-weight:700;color:${pOpFat<=META_OP?'var(--green)':'var(--red)'};letter-spacing:.03em">🏢 CUSTO OPERACIONAL</div>
+          <div style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:20px;background:${pOpFat<=META_OP?'var(--green)':'var(--red)'};color:#fff">META: 50%</div>
+        </div>
+        <div style="font-size:18px;font-weight:800;color:${pOpFat<=META_OP?'var(--green)':'var(--red)'};font-family:var(--mono)">${fmt(metaOp)}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">Você gastou: <strong style="color:${pOpFat<=META_OP?'var(--green)':'var(--red)'};font-family:var(--mono)">${fmt(desTotal)}</strong> (${Math.round(pOpFat*100)}%)</div>
+        <div style="margin-top:6px;height:4px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.min(pOpFat/META_OP*100,100)}%;background:${pOpFat<=META_OP?'var(--green)':'var(--red)'};border-radius:4px"></div></div>
       </div>
-      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:12px">
-        <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:6px">COMPOSIÇÃO DO FATURAMENTO</div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
-          <span style="color:var(--text2)">✅ Já recebido</span>
-          <span style="font-weight:600;color:var(--green);font-family:var(--mono)">${fmt(recTotal)}</span>
+      <!-- Pró-labore 30% -->
+      <div style="background:var(--amber-bg);border-radius:var(--r-sm);padding:12px;border:1.5px solid #F5C97A">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="font-size:10px;font-weight:700;color:var(--amber);letter-spacing:.03em">💼 PRÓ-LABORE</div>
+          <div style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:20px;background:var(--amber);color:#fff">META: 30%</div>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
-          <span style="color:var(--text2)">⏳ A receber</span>
-          <span style="font-weight:600;color:var(--amber);font-family:var(--mono)">${fmt(recPendente)}</span>
+        <div style="font-size:18px;font-weight:800;color:var(--amber);font-family:var(--mono)">${fmt(metaPL)}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">Retire para você este mês</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--text3)">30% × ${fmt(fatTotal)}</div>
+      </div>
+      <!-- Reinvestimento 10% -->
+      <div style="background:var(--purple-bg);border-radius:var(--r-sm);padding:12px;border:1.5px solid #C4ADD9">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.03em">🔄 REINVESTIMENTO</div>
+          <div style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:20px;background:var(--purple);color:#fff">META: 10%</div>
         </div>
-        <div style="height:1px;background:var(--border);margin:5px 0"></div>
-        <div style="display:flex;justify-content:space-between;font-size:11px">
-          <span style="color:var(--text2);font-weight:600">Total</span>
-          <span style="font-weight:700;color:var(--blue);font-family:var(--mono)">${fmt(fatTotal)}</span>
+        <div style="font-size:18px;font-weight:800;color:var(--purple);font-family:var(--mono)">${fmt(metaRein)}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">Você investiu: <strong style="color:var(--purple);font-family:var(--mono)">${fmt(invTotal)}</strong> (${Math.round(pInvFat*100)}%)</div>
+        <div style="margin-top:6px;height:4px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.min(pInvFat/META_REIN*100,100)}%;background:var(--purple);border-radius:4px"></div></div>
+      </div>
+      <!-- Guardar 10% -->
+      <div style="background:var(--blue-bg);border-radius:var(--r-sm);padding:12px;border:1.5px solid #9AB8DC">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.03em">🏦 GUARDAR / RESERVA</div>
+          <div style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:20px;background:var(--blue);color:#fff">META: 10%</div>
         </div>
+        <div style="font-size:18px;font-weight:800;color:var(--blue);font-family:var(--mono)">${fmt(metaGuar)}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">Guarde como reserva de emergência</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--text3)">10% × ${fmt(fatTotal)}</div>
       </div>
     </div>
-    <div style="font-size:11px;color:var(--text3);margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--r-sm)">
-      💡 Faixa recomendada para faturamento até R$ 20k: 20% a 30% do faturamento. Você está usando 25% como padrão.
+    <!-- Barra visual total -->
+    <div style="background:var(--surface2);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.05em;margin-bottom:8px;text-transform:uppercase">Distribuição ideal do faturamento</div>
+      <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;gap:1px">
+        <div style="flex:50;background:#2A7A4B" title="Operação 50%"></div>
+        <div style="flex:30;background:#A05C00" title="Pró-labore 30%"></div>
+        <div style="flex:10;background:#6D3FA8" title="Reinvestimento 10%"></div>
+        <div style="flex:10;background:#1A5FA8" title="Guardar 10%"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
+        <span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#2A7A4B;display:inline-block"></span>Operação 50%</span>
+        <span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#A05C00;display:inline-block"></span>Pró-labore 30%</span>
+        <span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#6D3FA8;display:inline-block"></span>Reinvestimento 10%</span>
+        <span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#1A5FA8;display:inline-block"></span>Guardar 10%</span>
+      </div>
+    </div>
+    <!-- Composição do faturamento -->
+    <div style="background:var(--surface2);border-radius:var(--r-sm);padding:10px 12px">
+      <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Composição do faturamento</div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+        <span style="color:var(--text2)">✅ Já recebido</span>
+        <span style="font-weight:600;color:var(--green);font-family:var(--mono)">${fmt(recTotal)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+        <span style="color:var(--text2)">⏳ A receber</span>
+        <span style="font-weight:600;color:var(--amber);font-family:var(--mono)">${fmt(recPendente)}</span>
+      </div>
+      <div style="height:1px;background:var(--border);margin:5px 0"></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px">
+        <span style="color:var(--text2);font-weight:600">Total do mês</span>
+        <span style="font-weight:700;color:var(--blue);font-family:var(--mono)">${fmt(fatTotal)}</span>
+      </div>
     </div>
   </div>`;
 
-  recs.unshift({
-    t: 'Pró-labore sugerido: ' + fmt(proLabore),
-    s: 'Baseado no faturamento do mês (recebido + a receber):',
-    extra: proLaboreEl
+  recs.push({
+    t: 'Distribuição sugerida — Modelo 50/30/10/10',
+    s: 'Veja como distribuir cada real do seu faturamento de forma estratégica:',
+    extra: distEl
   });
 
-  if(sOp==='vermelho') recs.push({t:'Reduza custos operacionais urgentemente',s:'Suas despesas consomem '+Math.round(pOp3*100)+'% do faturamento. Meta: abaixo de 55%. Revise contratos, ferramentas e fornecedores.'});
-  else if(sOp==='amarelo') recs.push({t:'Monitore seus custos fixos',s:'Em nível de atenção ('+Math.round(pOp3*100)+'%). Revise ferramentas e serviços que não geram retorno direto.'});
-  if(sMar==='vermelho') recs.push({t:'Aumente o faturamento ou corte custos',s:'Sua margem de lucro está negativa. Meta mínima: 20% de margem. Calcule o ponto de equilíbrio do negócio.'});
-  if(sInv==='vermelho') recs.push({t:'Reserve um % do faturamento para reinvestir',s:'Sem investimentos, o negócio para de crescer. Separe pelo menos 5–10% da receita para melhorias e capacitação.'});
-  if(sPend==='vermelho') recs.push({t:'Reduza recebimentos pendentes',s:'Você tem '+fmt(pendentes)+' a receber ainda não confirmados. Acione os clientes e estabeleça prazos claros de pagamento.'});
-  if(sCont>0) recs.push({t:'Regularize contas vencidas',s:sContas+' conta'+(sContas!==1?'s':'')+' vencida'+(sContas!==1?'s':'')+'. Acesse a aba Contas para quitar ou renegociar.'});
-  if(recs.length===1) recs.push({t:'Continue assim!',s:'Além do pró-labore, seu negócio está saudável. Mantenha a disciplina e foque no crescimento sustentável.'});
+  // Dicas dinâmicas baseadas nos desvios das metas
+  if(sOp==='vermelho') recs.push({
+    t:'⚠ Custo operacional acima da meta ('+Math.round(pOpFat*100)+'% vs meta 50%)',
+    s:'Você gastou '+fmt(desTotal)+' em operação. O ideal seria até '+fmt(metaOp)+'. Diferença: '+fmt(desTotal-metaOp)+' a mais. Revise contratos, ferramentas e fornecedores para recuperar essa margem.'
+  });
+  else if(sOp==='amarelo') recs.push({
+    t:'📊 Custo operacional próximo do limite ('+Math.round(pOpFat*100)+'% vs meta 50%)',
+    s:'Você está em atenção. Revise despesas recorrentes que podem ser otimizadas antes de ultrapassar a meta de 50%.'
+  });
+  else recs.push({
+    t:'✅ Custo operacional dentro da meta ('+Math.round(pOpFat*100)+'%)',
+    s:'Seus custos operacionais estão controlados (meta: 50%). Continue monitorando mensalmente para manter essa disciplina.'
+  });
+
+  if(sInv==='vermelho') recs.push({
+    t:'🔄 Reinvestimento abaixo da meta ('+Math.round(pInvFat*100)+'% vs meta 10%)',
+    s:'Sem reinvestir, o negócio para de crescer. Meta: '+fmt(metaRein)+' este mês. Aplique em tecnologia, capacitação ou melhorias que gerem retorno direto.'
+  });
+  else if(sInv==='amarelo') recs.push({
+    t:'🔄 Reinvestimento parcial ('+Math.round(pInvFat*100)+'% vs meta 10%)',
+    s:'Você investiu '+fmt(invTotal)+'. Para atingir a meta, ainda faltam '+fmt(metaRein-invTotal)+'. Considere reinvestir antes do fim do mês.'
+  });
+
+  if(sPend==='vermelho') recs.push({
+    t:'⏳ Muitos recebimentos pendentes ('+fmt(pendentes)+')',
+    s:'Você tem '+fmt(pendentes)+' a receber ainda não confirmados. Acione os clientes, estabeleça prazos claros e considere cobranças automáticas para reduzir a inadimplência.'
+  });
+
+  if(sCont>0) recs.push({
+    t:'📅 Regularize contas vencidas ('+sContas+' conta'+(sContas!==1?'s':'')+')',
+    s:sContas+' conta'+(sContas!==1?'s':'')+' vencida'+(sContas!==1?'s':'')+'. Acesse a aba Contas para quitar ou renegociar antes que gerem juros ou prejudiquem o crédito do negócio.'
+  });
+
+  if(recs.length===1) recs.push({
+    t:'🎯 Negócio saudável — continue assim!',
+    s:'Você está dentro das metas do modelo 50/30/10/10. Mantenha a disciplina de separar o pró-labore ('+fmt(metaPL)+') e guardar a reserva ('+fmt(metaGuar)+') todos os meses.'
+  });
 
   el('s-recomendacoes').innerHTML = recs.map((r,i)=>
-    `<div class="rec-row"><span class="rec-num" style="color:${i===0?'var(--green)':'var(--amber)'}">${String(i+1).padStart(2,'0')}</span><div><div class="rec-titulo">${r.t}</div><div class="rec-detalhe">${r.s}</div>${r.extra||''}</div></div>`
+    `<div class="rec-row"><span class="rec-num" style="color:${i===0?'var(--blue)':sOp==='verde'&&sMar==='verde'?'var(--green)':'var(--amber)'}">${String(i+1).padStart(2,'0')}</span><div><div class="rec-titulo">${r.t}</div><div class="rec-detalhe">${r.s}</div>${r.extra||''}</div></div>`
   ).join('');
 }
 
