@@ -288,6 +288,36 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
   .login-box{padding:28px 20px;border-radius:var(--r-md)}
   .login-title{font-size:17px}
 }
+
+/* ─── SAÚDE DO NEGÓCIO ──────────────────── */
+.saude-secao{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin:18px 0 8px}
+.saude-secao:first-child{margin-top:0}
+.balde-card{border-radius:var(--r-md);padding:14px 16px;margin-bottom:8px;border:1px solid transparent}
+.balde-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px}
+.balde-nome{font-size:14px;font-weight:600}
+.balde-valor{font-size:20px;font-weight:700;font-family:var(--mono);letter-spacing:-.5px}
+.balde-pct{font-size:11px;margin-top:2px;opacity:.75}
+.balde-track{height:4px;border-radius:2px;background:rgba(0,0,0,.07);margin-top:10px}
+.balde-fill{height:4px;border-radius:2px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.sem-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border)}
+.sem-row:last-child{border-bottom:none}
+.sem-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.sem-txt{font-size:13px;flex:1;line-height:1.4}
+.sem-status{font-size:11px;font-weight:700;white-space:nowrap}
+.rec-row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.rec-row:last-child{border-bottom:none}
+.rec-num{font-size:18px;font-weight:700;color:var(--amber);min-width:26px;font-family:var(--font)}
+.rec-titulo{font-size:13px;font-weight:600;color:var(--text)}
+.rec-detalhe{font-size:12px;color:var(--text2);margin-top:3px;line-height:1.5}
+.alerta-saude{background:var(--amber-bg);border:1px solid var(--amber);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--amber);line-height:1.5}
+.saude-total{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:10px}
+.saude-total-label{font-size:13px;color:var(--text2)}
+.saude-total-val{font-size:16px;font-weight:700;font-family:var(--mono);color:var(--green)}
+.saude-periodo{font-size:12px;color:var(--text3);margin-bottom:14px}
+.saude-score{text-align:center;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);margin-bottom:14px}
+.saude-score-num{font-size:48px;font-weight:700;font-family:var(--font);letter-spacing:-2px;line-height:1}
+.saude-score-label{font-size:13px;color:var(--text2);margin-top:6px}
+.saude-score-sub{font-size:11px;color:var(--text3);margin-top:3px}
 </style>
 </head>
 <body>
@@ -359,6 +389,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
     <div class="section-label" style="padding:0 4px;margin-top:12px">Gestão</div>
     <button class="sb-item" onclick="nav('equipe',this)"><span class="sb-icon">⊹</span>Equipe</button>
     <button class="sb-item" onclick="nav('relatorio',this)"><span class="sb-icon">▦</span>Relatório</button>
+    <button class="sb-item" onclick="nav('saude',this)"><span class="sb-icon">♥</span>Saúde do Negócio</button>
   </nav>
   <div class="sb-footer">
     <div class="sb-empresa" style="margin-bottom:8px">
@@ -550,6 +581,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
   <button class="mobile-nav-btn" onclick="nav('contas',this,true)"><span class="mobile-nav-icon">◷</span>Contas</button>
   <button class="mobile-nav-btn" onclick="nav('equipe',this,true)"><span class="mobile-nav-icon">⊹</span>Equipe</button>
   <button class="mobile-nav-btn" onclick="nav('relatorio',this,true)"><span class="mobile-nav-icon">▦</span>Relatório</button>
+  <button class="mobile-nav-btn" onclick="nav('saude',this,true)"><span class="mobile-nav-icon">♥</span>Saúde</button>
 </nav>
 
 <!-- MODAL NOVO LANÇAMENTO -->
@@ -959,7 +991,7 @@ function calcCaixa() {
 }
 
 // ═══ NAVEGAÇÃO ═════════════════════════════════
-const LABELS = {dashboard:'Dashboard',lancamentos:'Lançamentos',contas:'Contas',equipe:'Equipe',relatorio:'Relatório'};
+const LABELS = {dashboard:'Dashboard',lancamentos:'Lançamentos',contas:'Contas',equipe:'Equipe',relatorio:'Relatório',saude:'Saúde do Negócio'};
 function nav(screen, btn, mobile=false) {
   currentScreen = screen;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -1480,12 +1512,127 @@ function atualizarBadgeContas() {
   b.style.display = vencidas > 0 ? '' : 'none';
 }
 
+function renderSaude() {
+  const ano = getAno(), mes = getMes();
+  // Usar últimos 3 meses com dados para média
+  const lPagos = lancamentos.filter(l=>l.status==='Pago');
+  const mesesComDados = [...new Set(lPagos.map(l=>l.ano*100+l.mes))].sort((a,b)=>b-a).slice(0,3);
+  const periodo = mesesComDados.length;
+  if(!periodo){ el('saude-score-num').textContent='—'; el('saude-score-label').textContent='Sem dados suficientes'; return; }
+
+  const recTotal  = lPagos.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+  const desTotal  = lPagos.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
+  const invTotal  = lPagos.filter(l=>l.tipo==='investimento').reduce((s,l)=>s+l.valor,0);
+  const lucTotal  = recTotal - desTotal - invTotal;
+
+  // Médias mensais dos últimos meses com dados
+  const mesesUnicos = [...new Set(lPagos.map(l=>l.ano*100+l.mes))];
+  const nMeses = Math.max(mesesUnicos.length, 1);
+  const recMed = recTotal / nMeses;
+  const desMed = desTotal / nMeses;
+  const invMed = invTotal / nMeses;
+  const lucMed = lucTotal / nMeses;
+
+  el('saude-periodo-label').textContent = 'Baseado em '+nMeses+' mês'+(nMeses>1?'es':'')+' de dados reais';
+  el('s-rec').textContent = fmt(recTotal);
+  el('s-des').textContent = fmt(desTotal);
+  el('s-inv').textContent = fmt(invTotal);
+  el('s-luc').textContent = fmt(lucTotal);
+  el('s-luc').style.color = lucTotal>=0?'var(--green)':'var(--red)';
+
+  // Percentuais sobre receita
+  const pOp  = recTotal>0 ? desTotal/recTotal : 0;
+  const pInv = recTotal>0 ? invTotal/recTotal : 0;
+  const pLuc = recTotal>0 ? lucTotal/recTotal : 0;
+  const pOp3 = recMed>0 ? desMed/recMed : 0;
+
+  // Baldes
+  const baldes = [
+    { nome:'Operação & Despesas', val:desTotal, cor:'#2A7A4B', bg:'#EAF4EE', borda:'#A7D7B8', pctTxt: Math.round(pOp*100)+'% do faturamento' },
+    { nome:'Investimentos', val:invTotal, cor:'#6D3FA8', bg:'#F2EDFC', borda:'#C4ADD9', pctTxt: Math.round(pInv*100)+'% do faturamento' },
+    { nome:'Lucro líquido', val:lucTotal, cor: lucTotal>=0?'#185FA5':'#C0392B', bg: lucTotal>=0?'#EAF1FB':'#FDECEA', borda: lucTotal>=0?'#9AB8DC':'#E9A5A0', pctTxt: Math.round(pLuc*100)+'% do faturamento' },
+  ];
+
+  el('s-baldes').innerHTML = baldes.map(b=>{
+    const p = recTotal>0 ? Math.round(Math.abs(b.val)/recTotal*100) : 0;
+    return `<div class="balde-card" style="background:${b.bg};border-color:${b.borda}">
+      <div class="balde-header">
+        <span class="balde-nome" style="color:${b.cor}">${b.nome}</span>
+        <span class="balde-valor" style="color:${b.cor}">${fmt(b.val)}</span>
+      </div>
+      <div class="balde-pct" style="color:${b.cor}">${b.pctTxt}</div>
+      <div class="balde-track"><div class="balde-fill" style="width:${p}%;background:${b.cor}"></div></div>
+    </div>`;
+  }).join('');
+
+  // Semáforo
+  const margem = pLuc;
+  const sOp  = pOp3 < 0.55 ? 'verde' : pOp3 < 0.80 ? 'amarelo' : 'vermelho';
+  const sMar = margem >= 0.20 ? 'verde' : margem >= 0 ? 'amarelo' : 'vermelho';
+  const sInv = pInv >= 0.05 ? 'verde' : pInv > 0 ? 'amarelo' : 'vermelho';
+  const pendentes = lancamentos.filter(l=>l.status==='Pendente'&&l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+  const sPend = pendentes===0 ? 'verde' : pendentes < recMed*0.5 ? 'amarelo' : 'vermelho';
+  const sContas = contas.filter(c=>{const d=new Date(c.ano,c.mes-1,c.dia||1);return d<new Date();}).length;
+  const sCont = sContas===0 ? 'verde' : sContas<=2 ? 'amarelo' : 'vermelho';
+
+  const COR = { verde:'#2A7A4B', amarelo:'#A05C00', vermelho:'#C0392B' };
+  const TXT = { verde:'Saudável', amarelo:'Atenção', vermelho:'Crítico' };
+
+  function semRow(cor, texto) {
+    return `<div class="sem-row"><div class="sem-dot" style="background:${COR[cor]}"></div><span class="sem-txt">${texto}</span><span class="sem-status" style="color:${COR[cor]}">${TXT[cor]}</span></div>`;
+  }
+
+  el('s-semaforo').innerHTML =
+    semRow(sOp,  'Custo operacional vs faturamento ('+Math.round(pOp3*100)+'%)') +
+    semRow(sMar, 'Margem de lucro líquida ('+Math.round(margem*100)+'%)') +
+    semRow(sInv, 'Investindo na empresa ('+Math.round(pInv*100)+'%)') +
+    semRow(sPend,'Recebimentos pendentes ('+fmt(pendentes)+')') +
+    semRow(sCont,'Contas vencidas ('+sContas+' conta'+(sContas!==1?'s':'')+')');
+
+  // Score geral 0–100
+  const scores = {verde:100,amarelo:50,vermelho:0};
+  const scoreTotal = Math.round((scores[sOp]+scores[sMar]+scores[sInv]+scores[sPend]+scores[sCont])/5);
+  const scoreLabel = scoreTotal>=80?'Excelente':scoreTotal>=60?'Bom':scoreTotal>=40?'Regular':'Atenção necessária';
+  const scoreCor   = scoreTotal>=80?'var(--green)':scoreTotal>=60?'var(--blue)':scoreTotal>=40?'var(--amber)':'var(--red)';
+  el('saude-score-num').textContent = scoreTotal;
+  el('saude-score-num').style.color = scoreCor;
+  el('saude-score-label').textContent = scoreLabel;
+  el('saude-score-sub').textContent = 'de 100 pontos possíveis';
+
+  // Alerta
+  const alertEl = el('saude-alerta');
+  if(lucTotal < 0) {
+    alertEl.style.display='block';
+    alertEl.textContent='⚠ Atenção: suas despesas superam as receitas em '+fmt(Math.abs(lucTotal))+'. Revise urgentemente seus gastos ou aumente o faturamento.';
+  } else if(margem < 0.10 && recTotal > 0) {
+    alertEl.style.display='block';
+    alertEl.textContent='⚠ Margem de lucro muito baixa ('+Math.round(margem*100)+'%). Ideal mínimo: 20%. Monitore seus custos.';
+  } else {
+    alertEl.style.display='none';
+  }
+
+  // Recomendações
+  const recs = [];
+  if(sOp==='vermelho') recs.push({t:'Reduza custos operacionais urgentemente',s:'Suas despesas consomem '+Math.round(pOp3*100)+'% do faturamento. Meta: abaixo de 55%. Revise contratos, ferramentas e fornecedores.'});
+  else if(sOp==='amarelo') recs.push({t:'Monitore seus custos fixos',s:'Em nível de atenção ('+Math.round(pOp3*100)+'%). Revise ferramentas e serviços que não geram retorno direto.'});
+  if(sMar==='vermelho') recs.push({t:'Aumente o faturamento ou corte custos',s:'Sua margem de lucro está negativa. Meta mínima: 20% de margem. Calcule o ponto de equilíbrio do negócio.'});
+  if(sInv==='vermelho') recs.push({t:'Reserve um % do faturamento para reinvestir',s:'Sem investimentos, o negócio para de crescer. Separe pelo menos 5–10% da receita para melhorias e capacitação.'});
+  if(sPend==='vermelho') recs.push({t:'Reduza recebimentos pendentes',s:'Você tem '+fmt(pendentes)+' a receber ainda não confirmados. Acione os clientes e estabeleça prazos claros de pagamento.'});
+  if(sCont>0) recs.push({t:'Regularize contas vencidas',s:sContas+' conta'+(sContas!==1?'s':'')+' vencida'+(sContas!==1?'s':'')+'. Acesse a aba Contas para quitar ou renegociar.'});
+  if(recs.length===0) recs.push({t:'Continue assim!',s:'Seu negócio está saudável. Mantenha a disciplina financeira e foque no crescimento sustentável.'});
+
+  el('s-recomendacoes').innerHTML = recs.slice(0,4).map((r,i)=>
+    `<div class="rec-row"><span class="rec-num">0${i+1}</span><div><div class="rec-titulo">${r.t}</div><div class="rec-detalhe">${r.s}</div></div></div>`
+  ).join('');
+}
+
 function renderAll() {
   if(currentScreen==='dashboard')   renderDashboard();
   if(currentScreen==='lancamentos') renderLancamentos();
   if(currentScreen==='contas')      renderContas();
   if(currentScreen==='equipe')      renderEquipe();
   if(currentScreen==='relatorio')   renderRelatorio();
+  if(currentScreen==='saude')       renderSaude();
   atualizarBadgeContas();
 }
 
