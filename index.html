@@ -1707,6 +1707,32 @@ function renderSaude() {
   const pLuc = recTotal>0 ? lucTotal/recTotal : 0;
   const pOp3 = pOp; // mês a mês não tem média
 
+  // ── Faturamento: pago + a receber no mês ─────────────────────────────
+  const recPendente = lancamentos.filter(l=>l.status==='Pendente'&&l.tipo==='receita'&&l.mes===mes&&l.ano===ano).reduce((s,l)=>s+l.valor,0);
+  const fatTotal    = recTotal + recPendente;
+
+  const cardFaturamento = `
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 20px;margin-bottom:16px;box-shadow:var(--shadow)">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">Faturamento do mês</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div style="background:var(--green-bg);border-radius:var(--r-sm);padding:12px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:var(--green);margin-bottom:4px">✅ JÁ RECEBIDO</div>
+        <div style="font-size:17px;font-weight:700;color:var(--green);font-family:var(--mono)">${fmt(recTotal)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">lançamentos pagos</div>
+      </div>
+      <div style="background:var(--amber-bg);border-radius:var(--r-sm);padding:12px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:var(--amber);margin-bottom:4px">⏳ A RECEBER</div>
+        <div style="font-size:17px;font-weight:700;color:var(--amber);font-family:var(--mono)">${fmt(recPendente)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">lançamentos pendentes</div>
+      </div>
+      <div style="background:var(--blue-bg);border-radius:var(--r-sm);padding:12px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:var(--blue);margin-bottom:4px">📊 TOTAL DO MÊS</div>
+        <div style="font-size:17px;font-weight:700;color:var(--blue);font-family:var(--mono)">${fmt(fatTotal)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">faturamento projetado</div>
+      </div>
+    </div>
+  </div>`;
+
   // Baldes
   const baldes = [
     { nome:'Operação & Despesas', val:desTotal, cor:'#2A7A4B', bg:'#EAF4EE', borda:'#A7D7B8', pctTxt: Math.round(pOp*100)+'% do faturamento' },
@@ -1714,7 +1740,7 @@ function renderSaude() {
     { nome:'Lucro líquido', val:lucTotal, cor: lucTotal>=0?'#185FA5':'#C0392B', bg: lucTotal>=0?'#EAF1FB':'#FDECEA', borda: lucTotal>=0?'#9AB8DC':'#E9A5A0', pctTxt: Math.round(pLuc*100)+'% do faturamento' },
   ];
 
-  el('s-baldes').innerHTML = baldes.map(b=>{
+  const baldesHTML = baldes.map(b=>{
     const p = recTotal>0 ? Math.round(Math.abs(b.val)/recTotal*100) : 0;
     return `<div class="balde-card" style="background:${b.bg};border-color:${b.borda}">
       <div class="balde-header">
@@ -1725,13 +1751,14 @@ function renderSaude() {
       <div class="balde-track"><div class="balde-fill" style="width:${p}%;background:${b.cor}"></div></div>
     </div>`;
   }).join('');
+  el('s-baldes').innerHTML = cardFaturamento + baldesHTML;
 
   // Semáforo
   const margem = pLuc;
   const sOp  = pOp3 < 0.55 ? 'verde' : pOp3 < 0.80 ? 'amarelo' : 'vermelho';
   const sMar = margem >= 0.20 ? 'verde' : margem >= 0 ? 'amarelo' : 'vermelho';
   const sInv = pInv >= 0.05 ? 'verde' : pInv > 0 ? 'amarelo' : 'vermelho';
-  const pendentes = lancamentos.filter(l=>l.status==='Pendente'&&l.tipo==='receita'&&l.mes===mes&&l.ano===ano).reduce((s,l)=>s+l.valor,0);
+  const pendentes = recPendente;
   const sPend = pendentes===0 ? 'verde' : pendentes < recMed*0.5 ? 'amarelo' : 'vermelho';
   const sContas = contas.filter(c=>{const d=new Date(c.ano,c.mes-1,c.dia||1);return d<new Date();}).length;
   const sCont = sContas===0 ? 'verde' : sContas<=2 ? 'amarelo' : 'vermelho';
@@ -1774,33 +1801,44 @@ function renderSaude() {
 
   // Recomendações
   const recs = [];
-  // Pró-labore sugerido — sempre exibe
-  // Baseado no método: 50% do disponível após despesas
-  const disponivel = recTotal - desTotal;
-  const proLabore  = disponivel > 0 ? disponivel * 0.50 : 0;
-  const reinvest   = disponivel > 0 ? disponivel * 0.30 : 0;
-  const reserva    = disponivel > 0 ? disponivel * 0.20 : 0;
-  const proLaboreEl = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
-    <div style="background:var(--green-bg);border-radius:var(--r-sm);padding:10px;text-align:center">
-      <div style="font-size:10px;font-weight:600;color:var(--green);margin-bottom:3px">PRÓ-LABORE</div>
-      <div style="font-size:15px;font-weight:700;color:var(--green);font-family:var(--mono)">${fmt(proLabore)}</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px">50% do disponível</div>
+  // Pró-labore sugerido — baseado em 25% do faturamento total do mês (pago + pendente)
+  const proLabore   = fatTotal * 0.25;
+  const proLaboreEl = `
+  <div style="margin-top:10px">
+    <div style="font-size:11px;color:var(--text2);margin-bottom:8px">
+      Cálculo: 25% × ${fmt(fatTotal)} (faturamento total do mês)
     </div>
-    <div style="background:var(--amber-bg);border-radius:var(--r-sm);padding:10px;text-align:center">
-      <div style="font-size:10px;font-weight:600;color:var(--amber);margin-bottom:3px">REINVESTIMENTO</div>
-      <div style="font-size:15px;font-weight:700;color:var(--amber);font-family:var(--mono)">${fmt(reinvest)}</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px">30% do disponível</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="background:var(--green-bg);border-radius:var(--r-sm);padding:12px;text-align:center;border:1.5px solid #A7D7B8">
+        <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:4px;letter-spacing:.04em">💼 PRÓ-LABORE SUGERIDO</div>
+        <div style="font-size:20px;font-weight:800;color:var(--green);font-family:var(--mono)">${fmt(proLabore)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">25% do faturamento mensal</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:12px">
+        <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:6px">COMPOSIÇÃO DO FATURAMENTO</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+          <span style="color:var(--text2)">✅ Já recebido</span>
+          <span style="font-weight:600;color:var(--green);font-family:var(--mono)">${fmt(recTotal)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+          <span style="color:var(--text2)">⏳ A receber</span>
+          <span style="font-weight:600;color:var(--amber);font-family:var(--mono)">${fmt(recPendente)}</span>
+        </div>
+        <div style="height:1px;background:var(--border);margin:5px 0"></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px">
+          <span style="color:var(--text2);font-weight:600">Total</span>
+          <span style="font-weight:700;color:var(--blue);font-family:var(--mono)">${fmt(fatTotal)}</span>
+        </div>
+      </div>
     </div>
-    <div style="background:var(--blue-bg);border-radius:var(--r-sm);padding:10px;text-align:center">
-      <div style="font-size:10px;font-weight:600;color:var(--blue);margin-bottom:3px">RESERVA</div>
-      <div style="font-size:15px;font-weight:700;color:var(--blue);font-family:var(--mono)">${fmt(reserva)}</div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px">20% do disponível</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--r-sm)">
+      💡 Faixa recomendada para faturamento até R$ 20k: 20% a 30% do faturamento. Você está usando 25% como padrão.
     </div>
   </div>`;
 
   recs.unshift({
     t: 'Pró-labore sugerido: ' + fmt(proLabore),
-    s: 'Com base na receita de ' + fmt(recTotal) + ' e despesas de ' + fmt(desTotal) + ', seu disponível é ' + fmt(disponivel) + '. Sugestão de divisão:',
+    s: 'Baseado no faturamento do mês (recebido + a receber):',
     extra: proLaboreEl
   });
 
