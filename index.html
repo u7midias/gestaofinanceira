@@ -388,6 +388,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
     <button class="sb-item" onclick="nav('contas',this)"><span class="sb-icon">◷</span>Contas <span class="sb-badge" id="sb-badge-contas" style="display:none">0</span></button>
     <div class="section-label" style="padding:0 4px;margin-top:12px">Gestão</div>
     <button class="sb-item" onclick="nav('equipe',this)"><span class="sb-icon">⊹</span>Equipe</button>
+    <button class="sb-item" onclick="nav('clientes',this)"><span class="sb-icon">◈</span>Clientes</button>
     <button class="sb-item" onclick="nav('relatorio',this)"><span class="sb-icon">▦</span>Relatório</button>
     <button class="sb-item" onclick="nav('saude',this)"><span class="sb-icon">♥</span>Saúde do Negócio</button>
   </nav>
@@ -571,6 +572,43 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
       </div>
     </div>
 
+    <!-- ══════════ CLIENTES ══════════ -->
+    <div class="screen" id="sc-clientes">
+      <div class="page-header-row">
+        <div>
+          <div class="page-title">Clientes</div>
+          <div class="page-sub">Contratos ativos e receita recorrente</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-cliente')">+ Novo cliente</button>
+      </div>
+
+      <!-- KPIs -->
+      <div class="grid-3" style="margin-bottom:16px">
+        <div class="kpi-card"><div class="kpi-label">Total de clientes</div><div class="kpi-value" id="cli-total">0</div></div>
+        <div class="kpi-card"><div class="kpi-label">MRR (contratos ativos)</div><div class="kpi-value g" id="cli-mrr">R$ 0</div><div class="kpi-footer">receita mensal recorrente</div></div>
+        <div class="kpi-card"><div class="kpi-label">Ticket médio</div><div class="kpi-value b" id="cli-ticket">R$ 0</div></div>
+      </div>
+
+      <!-- Tabela -->
+      <div class="card">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Serviço / Contrato</th>
+                <th>Vencimento</th>
+                <th>Status</th>
+                <th style="text-align:right">Valor / mês</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="cli-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ══════════ SAÚDE DO NEGÓCIO ══════════ -->
     <div class="screen" id="sc-saude">
       <div class="page-header-row">
@@ -590,7 +628,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 
       <div class="saude-score">
         <div class="saude-score-num" id="saude-score-num" style="color:var(--green)">—</div>
-        <div class="saude-score-label" id="saude-score-label">Clique para calcular</div>
+        <div class="saude-score-label" id="saude-score-label">Calculando...</div>
         <div class="saude-score-sub" id="saude-score-sub"></div>
       </div>
 
@@ -624,9 +662,50 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
   <button class="mobile-nav-btn" onclick="nav('lancamentos',this,true)"><span class="mobile-nav-icon">⇅</span>Lançar</button>
   <button class="mobile-nav-btn" onclick="nav('contas',this,true)"><span class="mobile-nav-icon">◷</span>Contas</button>
   <button class="mobile-nav-btn" onclick="nav('equipe',this,true)"><span class="mobile-nav-icon">⊹</span>Equipe</button>
+  <button class="mobile-nav-btn" onclick="nav('clientes',this,true)"><span class="mobile-nav-icon">◈</span>Clientes</button>
   <button class="mobile-nav-btn" onclick="nav('relatorio',this,true)"><span class="mobile-nav-icon">▦</span>Relatório</button>
   <button class="mobile-nav-btn" onclick="nav('saude',this,true)"><span class="mobile-nav-icon">♥</span>Saúde</button>
 </nav>
+
+<!-- MODAL CLIENTE -->
+<div class="overlay modal-overlay" id="modal-cliente-bg" onclick="closeModal('modal-cliente')"></div>
+<div class="modal-wrap" id="modal-cliente">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-cli-title">Novo cliente</div>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-cliente')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>Nome do cliente / empresa</label><input type="text" id="cli-nome" placeholder="Ex: Studio XYZ"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Serviço / tipo de contrato</label><input type="text" id="cli-servico" placeholder="Ex: Gestão de redes, Tráfego pago..."></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Valor mensal (R$)</label><input type="number" id="cli-valor" placeholder="0,00" step="0.01" min="0"></div>
+        <div class="form-group"><label>Dia de vencimento</label><input type="number" id="cli-venc" placeholder="Ex: 10" min="1" max="31"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Status</label>
+          <select id="cli-status">
+            <option value="ativo">Ativo</option>
+            <option value="pausado">Pausado</option>
+            <option value="encerrado">Encerrado</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Contato (opcional)</label><input type="text" id="cli-contato" placeholder="WhatsApp, e-mail..."></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Observação (opcional)</label><input type="text" id="cli-obs" placeholder="Notas sobre o contrato..."></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-cliente')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCliente()">Salvar</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL NOVO LANÇAMENTO -->
 <div class="overlay modal-overlay" id="modal-novo-bg" onclick="closeModal('modal-novo')"></div>
@@ -907,7 +986,7 @@ async function checkAuth() {
 
 async function doLogout() {
   await sb.auth.signOut();
-  currentUserId=null; lancamentos=[]; contas=[]; equipe=[];
+  currentUserId=null; lancamentos=[]; contas=[]; equipe=[]; clientes=[];
   location.reload();
 }
 
@@ -930,6 +1009,7 @@ const CUR_MES = now.getMonth()+1;
 const CUR_ANO = now.getFullYear();
 
 // ═══ DADOS ════════════════════════════════════
+let clientes = [];
 let lancamentos = [];
 let contas = [];
 let equipe = [];
@@ -946,14 +1026,16 @@ function load(){}  // idem
 
 async function carregarDados() {
   try {
-    const [lr, cr, er] = await Promise.all([
+    const [lr, cr, er, cliR] = await Promise.all([
       sb.from('lancamentos').select('*').order('ano').order('mes').order('dia'),
       sb.from('contas').select('*').order('ano').order('mes').order('dia'),
       sb.from('equipe').select('*').order('created_at'),
+      sb.from('clientes').select('*').order('created_at'),
     ]);
     lancamentos = (lr.data||[]).map(dbToLanc);
     contas      = (cr.data||[]).map(dbToConta);
     equipe      = (er.data||[]).map(dbToColab);
+    clientes    = (cliR.data||[]).map(dbToCliente);
   } catch(e){ toast('Erro ao carregar dados',true); }
 }
 
@@ -966,6 +1048,24 @@ async function getUserId(){
   currentUserId = user?.id||null;
   return currentUserId;
 }
+function dbToCliente(r){ return {id:r.id,nome:r.nome,servico:r.servico||'',valor:Number(r.valor)||0,venc:r.venc||'',status:r.status||'ativo',contato:r.contato||'',obs:r.obs||''}; }
+function clienteToDb(cli,uid){ return {user_id:uid,nome:cli.nome,servico:cli.servico||null,valor:cli.valor,venc:cli.venc||null,status:cli.status,contato:cli.contato||null,obs:cli.obs||null}; }
+
+async function dbInsertCliente(cli){
+  const uid=await getUserId();
+  const {data,error}=await sb.from('clientes').insert(clienteToDb(cli,uid)).select().single();
+  if(error){toast('Erro ao salvar cliente: '+error.message,true);return null;}
+  return data.id;
+}
+async function dbUpdateCliente(id,fields){
+  const {error}=await sb.from('clientes').update(fields).eq('id',id);
+  if(error){toast('Erro ao atualizar cliente',true);}
+}
+async function dbDeleteCliente(id){
+  const {error}=await sb.from('clientes').delete().eq('id',id);
+  if(error){toast('Erro ao remover cliente',true);}
+}
+
 function lancToDb(l, uid){ return {user_id:uid,descricao:l.desc,tipo:l.tipo,valor:l.valor,dia:l.dia||null,mes:l.mes,ano:l.ano,cat:l.cat||null,status:l.status,obs:l.obs||null,recorrente:!!l.recorrente}; }
 function dbToConta(r){ return {id:r.id,tipo:r.tipo,desc:r.descricao,valor:Number(r.valor),dia:r.dia,mes:r.mes,ano:r.ano}; }
 function contaToDb(c, uid){ return {user_id:uid,descricao:c.desc,tipo:c.tipo,valor:c.valor,dia:c.dia||null,mes:c.mes,ano:c.ano}; }
@@ -1035,7 +1135,7 @@ function calcCaixa() {
 }
 
 // ═══ NAVEGAÇÃO ═════════════════════════════════
-const LABELS = {dashboard:'Dashboard',lancamentos:'Lançamentos',contas:'Contas',equipe:'Equipe',relatorio:'Relatório',saude:'Saúde do Negócio'};
+const LABELS = {dashboard:'Dashboard',lancamentos:'Lançamentos',contas:'Contas',equipe:'Equipe',clientes:'Clientes',relatorio:'Relatório',saude:'Saúde do Negócio'};
 function nav(screen, btn, mobile=false) {
   currentScreen = screen;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -1046,6 +1146,11 @@ function nav(screen, btn, mobile=false) {
   if(btn) btn.classList.add('active');
   if(mobile) closeSidebar();
   el('content').scrollTop = 0;
+  // set saude selects to current month before rendering
+  if(screen==='saude'){
+    const sm=el('saude-mes'), sa=el('saude-ano');
+    if(sm && !sm._initialized){ sm.value=CUR_MES; sa.value=CUR_ANO; sm._initialized=true; }
+  }
   renderAll();
 }
 function toggleSidebar(){ el('sidebar').classList.toggle('open'); el('overlay').classList.toggle('open'); }
@@ -1557,8 +1662,9 @@ function atualizarBadgeContas() {
 }
 
 function renderSaude() {
-  const mes = parseInt((el('saude-mes')||{value:CUR_MES}).value);
-  const ano = parseInt((el('saude-ano')||{value:CUR_ANO}).value);
+  const smEl = el('saude-mes'), saEl = el('saude-ano');
+  const mes = smEl ? parseInt(smEl.value)||CUR_MES : CUR_MES;
+  const ano = saEl ? parseInt(saEl.value)||CUR_ANO : CUR_ANO;
 
   el('saude-periodo-label').textContent = MESES_F[mes-1]+' de '+ano;
 
@@ -1572,15 +1678,19 @@ function renderSaude() {
 
   if(recTotal===0 && desTotal===0 && invTotal===0){
     el('saude-score-num').textContent='—';
-    el('saude-score-label').textContent='Sem dados para este mês';
-    el('saude-score-sub').textContent='';
+    el('saude-score-label').textContent='Sem lançamentos pagos';
+    el('saude-score-sub').textContent='Lance suas receitas e despesas para ver o diagnóstico';
     el('s-rec').textContent='R$ 0,00';
     el('s-des').textContent='R$ 0,00';
     el('s-inv').textContent='R$ 0,00';
     el('s-luc').textContent='R$ 0,00';
-    el('s-baldes').innerHTML='<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Nenhum lançamento pago neste mês</div></div>';
-    el('s-semaforo').innerHTML='';
-    el('s-recomendacoes').innerHTML='';
+    el('s-baldes').innerHTML='<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Nenhum lançamento pago em '+MESES_F[mes-1]+'/'+ano+'</div></div>';
+    el('s-semaforo').innerHTML='<div style="font-size:13px;color:var(--text2);padding:8px 0">Adicione lançamentos e marque como <strong>Pago</strong> para ver o semáforo.</div>';
+    el('s-recomendacoes').innerHTML=`
+      <div class="rec-row"><span class="rec-num">01</span><div><div class="rec-titulo">Registre todas as receitas do mês</div><div class="rec-detalhe">Lance cada entrada de dinheiro mesmo que seja pequena. O controle começa pelo registro fiel.</div></div></div>
+      <div class="rec-row"><span class="rec-num">02</span><div><div class="rec-titulo">Registre todas as despesas</div><div class="rec-detalhe">Aluguel, salários, ferramentas, impostos — tudo precisa estar registrado para o diagnóstico ser preciso.</div></div></div>
+      <div class="rec-row"><span class="rec-num">03</span><div><div class="rec-titulo">Marque os lançamentos como Pago</div><div class="rec-detalhe">A saúde do negócio é calculada com base apenas nos valores já recebidos ou pagos. Clique no badge de status para confirmar.</div></div></div>
+    `;
     el('saude-alerta').style.display='none';
     return;
   }
@@ -1664,17 +1774,128 @@ function renderSaude() {
 
   // Recomendações
   const recs = [];
+  // Pró-labore sugerido — sempre exibe
+  // Baseado no método: 50% do disponível após despesas
+  const disponivel = recTotal - desTotal;
+  const proLabore  = disponivel > 0 ? disponivel * 0.50 : 0;
+  const reinvest   = disponivel > 0 ? disponivel * 0.30 : 0;
+  const reserva    = disponivel > 0 ? disponivel * 0.20 : 0;
+  const proLaboreEl = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
+    <div style="background:var(--green-bg);border-radius:var(--r-sm);padding:10px;text-align:center">
+      <div style="font-size:10px;font-weight:600;color:var(--green);margin-bottom:3px">PRÓ-LABORE</div>
+      <div style="font-size:15px;font-weight:700;color:var(--green);font-family:var(--mono)">${fmt(proLabore)}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">50% do disponível</div>
+    </div>
+    <div style="background:var(--amber-bg);border-radius:var(--r-sm);padding:10px;text-align:center">
+      <div style="font-size:10px;font-weight:600;color:var(--amber);margin-bottom:3px">REINVESTIMENTO</div>
+      <div style="font-size:15px;font-weight:700;color:var(--amber);font-family:var(--mono)">${fmt(reinvest)}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">30% do disponível</div>
+    </div>
+    <div style="background:var(--blue-bg);border-radius:var(--r-sm);padding:10px;text-align:center">
+      <div style="font-size:10px;font-weight:600;color:var(--blue);margin-bottom:3px">RESERVA</div>
+      <div style="font-size:15px;font-weight:700;color:var(--blue);font-family:var(--mono)">${fmt(reserva)}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">20% do disponível</div>
+    </div>
+  </div>`;
+
+  recs.unshift({
+    t: 'Pró-labore sugerido: ' + fmt(proLabore),
+    s: 'Com base na receita de ' + fmt(recTotal) + ' e despesas de ' + fmt(desTotal) + ', seu disponível é ' + fmt(disponivel) + '. Sugestão de divisão:',
+    extra: proLaboreEl
+  });
+
   if(sOp==='vermelho') recs.push({t:'Reduza custos operacionais urgentemente',s:'Suas despesas consomem '+Math.round(pOp3*100)+'% do faturamento. Meta: abaixo de 55%. Revise contratos, ferramentas e fornecedores.'});
   else if(sOp==='amarelo') recs.push({t:'Monitore seus custos fixos',s:'Em nível de atenção ('+Math.round(pOp3*100)+'%). Revise ferramentas e serviços que não geram retorno direto.'});
   if(sMar==='vermelho') recs.push({t:'Aumente o faturamento ou corte custos',s:'Sua margem de lucro está negativa. Meta mínima: 20% de margem. Calcule o ponto de equilíbrio do negócio.'});
   if(sInv==='vermelho') recs.push({t:'Reserve um % do faturamento para reinvestir',s:'Sem investimentos, o negócio para de crescer. Separe pelo menos 5–10% da receita para melhorias e capacitação.'});
   if(sPend==='vermelho') recs.push({t:'Reduza recebimentos pendentes',s:'Você tem '+fmt(pendentes)+' a receber ainda não confirmados. Acione os clientes e estabeleça prazos claros de pagamento.'});
   if(sCont>0) recs.push({t:'Regularize contas vencidas',s:sContas+' conta'+(sContas!==1?'s':'')+' vencida'+(sContas!==1?'s':'')+'. Acesse a aba Contas para quitar ou renegociar.'});
-  if(recs.length===0) recs.push({t:'Continue assim!',s:'Seu negócio está saudável. Mantenha a disciplina financeira e foque no crescimento sustentável.'});
+  if(recs.length===1) recs.push({t:'Continue assim!',s:'Além do pró-labore, seu negócio está saudável. Mantenha a disciplina e foque no crescimento sustentável.'});
 
-  el('s-recomendacoes').innerHTML = recs.slice(0,4).map((r,i)=>
-    `<div class="rec-row"><span class="rec-num">0${i+1}</span><div><div class="rec-titulo">${r.t}</div><div class="rec-detalhe">${r.s}</div></div></div>`
+  el('s-recomendacoes').innerHTML = recs.map((r,i)=>
+    `<div class="rec-row"><span class="rec-num" style="color:${i===0?'var(--green)':'var(--amber)'}">${String(i+1).padStart(2,'0')}</span><div><div class="rec-titulo">${r.t}</div><div class="rec-detalhe">${r.s}</div>${r.extra||''}</div></div>`
   ).join('');
+}
+
+let editandoClienteId = null;
+
+async function salvarCliente(){
+  const nome    = el('cli-nome').value.trim();
+  const servico = el('cli-servico').value.trim();
+  const valor   = parseFloat(el('cli-valor').value)||0;
+  const venc    = el('cli-venc').value.trim();
+  const status  = el('cli-status').value;
+  const contato = el('cli-contato').value.trim();
+  const obs     = el('cli-obs').value.trim();
+  if(!nome){toast('Informe o nome do cliente',true);return;}
+
+  if(editandoClienteId){
+    await dbUpdateCliente(editandoClienteId,{nome,servico:servico||null,valor,venc:venc||null,status,contato:contato||null,obs:obs||null});
+    const idx=clientes.findIndex(x=>x.id===editandoClienteId);
+    if(idx>=0) clientes[idx]={...clientes[idx],nome,servico,valor,venc,status,contato,obs};
+    toast('Cliente atualizado ✓');
+  } else {
+    const obj={nome,servico,valor,venc,status,contato,obs};
+    const newId=await dbInsertCliente(obj);
+    if(newId){obj.id=newId;clientes.push(obj);}
+    toast('Cliente salvo ✓');
+  }
+  editandoClienteId=null;
+  el('modal-cli-title').textContent='Novo cliente';
+  ['cli-nome','cli-servico','cli-valor','cli-venc','cli-contato','cli-obs'].forEach(id=>el(id).value='');
+  el('cli-status').value='ativo';
+  closeModal('modal-cliente');
+  renderAll();
+}
+
+function editarCliente(id){
+  const cli=clientes.find(x=>x.id===id); if(!cli) return;
+  editandoClienteId=id;
+  el('cli-nome').value    = cli.nome||'';
+  el('cli-servico').value = cli.servico||'';
+  el('cli-valor').value   = cli.valor||'';
+  el('cli-venc').value    = cli.venc||'';
+  el('cli-status').value  = cli.status||'ativo';
+  el('cli-contato').value = cli.contato||'';
+  el('cli-obs').value     = cli.obs||'';
+  el('modal-cli-title').textContent='Editar cliente';
+  openModal('modal-cliente');
+}
+
+async function delCliente(id){
+  await dbDeleteCliente(id);
+  clientes=clientes.filter(x=>x.id!==id);
+  toast('Cliente removido'); renderAll();
+}
+
+function renderClientes(){
+  const ativos=clientes.filter(c=>c.status==='ativo');
+  const mrr=ativos.reduce((s,c)=>s+c.valor,0);
+  const ticket=ativos.length>0?mrr/ativos.length:0;
+  el('cli-total').textContent=clientes.length;
+  el('cli-mrr').textContent=fmtK(mrr);
+  el('cli-ticket').textContent=fmtK(ticket);
+
+  const STATUS_LABEL={ativo:'Ativo',pausado:'Pausado',encerrado:'Encerrado'};
+  const STATUS_CLS  ={ativo:'badge-g',pausado:'badge-a',encerrado:'badge-r'};
+
+  el('cli-tbody').innerHTML=clientes.length ? [...clientes]
+    .sort((a,b)=>{ const o={ativo:0,pausado:1,encerrado:2}; return (o[a.status]||0)-(o[b.status]||0)||a.nome.localeCompare(b.nome); })
+    .map(cli=>`<tr>
+      <td>
+        <div class="td-bold">${cli.nome}</div>
+        ${cli.contato?`<div style="font-size:11px;color:var(--text3)">${cli.contato}</div>`:''}
+      </td>
+      <td class="td-muted">${cli.servico||'—'}</td>
+      <td class="td-muted" style="font-size:12px">${cli.venc?'Dia '+cli.venc:'—'}</td>
+      <td><span class="badge ${STATUS_CLS[cli.status]||'badge-n'}">${STATUS_LABEL[cli.status]||cli.status}</span></td>
+      <td class="td-num ${cli.status==='ativo'?'td-green':'td-muted'}">${cli.status==='ativo'?fmt(cli.valor):'—'}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="editarCliente('${cli.id}')" style="font-size:13px;margin-right:2px" title="Editar">✎</button>
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="delCliente('${cli.id}')" style="font-size:12px" title="Excluir">✕</button>
+      </td>
+    </tr>`).join('')
+  : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">◈</div><div class="empty-text">Nenhum cliente cadastrado</div></div></td></tr>';
 }
 
 function renderAll() {
@@ -1682,6 +1903,7 @@ function renderAll() {
   if(currentScreen==='lancamentos') renderLancamentos();
   if(currentScreen==='contas')      renderContas();
   if(currentScreen==='equipe')      renderEquipe();
+  if(currentScreen==='clientes')    renderClientes();
   if(currentScreen==='relatorio')   renderRelatorio();
   if(currentScreen==='saude')       renderSaude();
   atualizarBadgeContas();
