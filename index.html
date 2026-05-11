@@ -573,9 +573,19 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 
     <!-- ══════════ SAÚDE DO NEGÓCIO ══════════ -->
     <div class="screen" id="sc-saude">
-      <div class="page-header">
-        <div class="page-title">Saúde do Negócio</div>
-        <div class="page-sub" id="saude-periodo-label">Análise baseada nos seus lançamentos</div>
+      <div class="page-header-row">
+        <div>
+          <div class="page-title">Saúde do Negócio</div>
+          <div class="page-sub" id="saude-periodo-label">Selecione o mês para análise</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="saude-mes" style="font-size:13px;border:1px solid var(--border2);border-radius:var(--r-sm);padding:5px 10px;background:var(--surface);font-family:var(--font);outline:none" onchange="renderSaude()">
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+          </select>
+          <select id="saude-ano" style="font-size:13px;border:1px solid var(--border2);border-radius:var(--r-sm);padding:5px 10px;background:var(--surface);font-family:var(--font);outline:none" onchange="renderSaude()">
+            <option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option>
+          </select>
+        </div>
       </div>
 
       <div class="saude-score">
@@ -1547,27 +1557,34 @@ function atualizarBadgeContas() {
 }
 
 function renderSaude() {
-  const ano = getAno(), mes = getMes();
-  // Usar últimos 3 meses com dados para média
-  const lPagos = lancamentos.filter(l=>l.status==='Pago');
-  const mesesComDados = [...new Set(lPagos.map(l=>l.ano*100+l.mes))].sort((a,b)=>b-a).slice(0,3);
-  const periodo = mesesComDados.length;
-  if(!periodo){ el('saude-score-num').textContent='—'; el('saude-score-label').textContent='Sem dados suficientes'; return; }
+  const mes = parseInt((el('saude-mes')||{value:CUR_MES}).value);
+  const ano = parseInt((el('saude-ano')||{value:CUR_ANO}).value);
 
-  const recTotal  = lPagos.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
-  const desTotal  = lPagos.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
-  const invTotal  = lPagos.filter(l=>l.tipo==='investimento').reduce((s,l)=>s+l.valor,0);
-  const lucTotal  = recTotal - desTotal - invTotal;
+  el('saude-periodo-label').textContent = MESES_F[mes-1]+' de '+ano;
 
-  // Médias mensais dos últimos meses com dados
-  const mesesUnicos = [...new Set(lPagos.map(l=>l.ano*100+l.mes))];
-  const nMeses = Math.max(mesesUnicos.length, 1);
-  const recMed = recTotal / nMeses;
-  const desMed = desTotal / nMeses;
-  const invMed = invTotal / nMeses;
-  const lucMed = lucTotal / nMeses;
+  // Filtrar só o mês/ano selecionado, só pagos
+  const lMes = lancamentos.filter(l=>l.mes===mes&&l.ano===ano&&l.status==='Pago');
 
-  el('saude-periodo-label').textContent = 'Baseado em '+nMeses+' mês'+(nMeses>1?'es':'')+' de dados reais';
+  const recTotal = lMes.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+  const desTotal = lMes.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
+  const invTotal = lMes.filter(l=>l.tipo==='investimento').reduce((s,l)=>s+l.valor,0);
+  const lucTotal = recTotal - desTotal - invTotal;
+
+  if(recTotal===0 && desTotal===0 && invTotal===0){
+    el('saude-score-num').textContent='—';
+    el('saude-score-label').textContent='Sem dados para este mês';
+    el('saude-score-sub').textContent='';
+    el('s-rec').textContent='R$ 0,00';
+    el('s-des').textContent='R$ 0,00';
+    el('s-inv').textContent='R$ 0,00';
+    el('s-luc').textContent='R$ 0,00';
+    el('s-baldes').innerHTML='<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Nenhum lançamento pago neste mês</div></div>';
+    el('s-semaforo').innerHTML='';
+    el('s-recomendacoes').innerHTML='';
+    el('saude-alerta').style.display='none';
+    return;
+  }
+
   el('s-rec').textContent = fmt(recTotal);
   el('s-des').textContent = fmt(desTotal);
   el('s-inv').textContent = fmt(invTotal);
@@ -1578,7 +1595,7 @@ function renderSaude() {
   const pOp  = recTotal>0 ? desTotal/recTotal : 0;
   const pInv = recTotal>0 ? invTotal/recTotal : 0;
   const pLuc = recTotal>0 ? lucTotal/recTotal : 0;
-  const pOp3 = recMed>0 ? desMed/recMed : 0;
+  const pOp3 = pOp; // mês a mês não tem média
 
   // Baldes
   const baldes = [
@@ -1604,7 +1621,7 @@ function renderSaude() {
   const sOp  = pOp3 < 0.55 ? 'verde' : pOp3 < 0.80 ? 'amarelo' : 'vermelho';
   const sMar = margem >= 0.20 ? 'verde' : margem >= 0 ? 'amarelo' : 'vermelho';
   const sInv = pInv >= 0.05 ? 'verde' : pInv > 0 ? 'amarelo' : 'vermelho';
-  const pendentes = lancamentos.filter(l=>l.status==='Pendente'&&l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+  const pendentes = lancamentos.filter(l=>l.status==='Pendente'&&l.tipo==='receita'&&l.mes===mes&&l.ano===ano).reduce((s,l)=>s+l.valor,0);
   const sPend = pendentes===0 ? 'verde' : pendentes < recMed*0.5 ? 'amarelo' : 'vermelho';
   const sContas = contas.filter(c=>{const d=new Date(c.ano,c.mes-1,c.dia||1);return d<new Date();}).length;
   const sCont = sContas===0 ? 'verde' : sContas<=2 ? 'amarelo' : 'vermelho';
@@ -1677,6 +1694,8 @@ function renderAll() {
   el('sel-mes').value=CUR_MES;
   el('nl-mes').value=CUR_MES;
   el('nc-mes').value=CUR_MES;
+  if(el('saude-mes')) el('saude-mes').value=CUR_MES;
+  if(el('saude-ano')) el('saude-ano').value=CUR_ANO;
   setNLTipo('receita');
   await checkAuth();
 })();
