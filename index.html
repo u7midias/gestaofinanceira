@@ -571,6 +571,40 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
       </div>
     </div>
 
+    <!-- ══════════ SAÚDE DO NEGÓCIO ══════════ -->
+    <div class="screen" id="sc-saude">
+      <div class="page-header">
+        <div class="page-title">Saúde do Negócio</div>
+        <div class="page-sub" id="saude-periodo-label">Análise baseada nos seus lançamentos</div>
+      </div>
+
+      <div class="saude-score">
+        <div class="saude-score-num" id="saude-score-num" style="color:var(--green)">—</div>
+        <div class="saude-score-label" id="saude-score-label">Clique para calcular</div>
+        <div class="saude-score-sub" id="saude-score-sub"></div>
+      </div>
+
+      <div id="saude-alerta" style="display:none" class="alerta-saude"></div>
+
+      <div class="saude-total"><span class="saude-total-label">Receita total (pago)</span><span class="saude-total-val" id="s-rec">—</span></div>
+      <div class="saude-total"><span class="saude-total-label">Despesas (pago)</span><span style="font-size:16px;font-weight:700;font-family:var(--mono);color:var(--red)" id="s-des">—</span></div>
+      <div class="saude-total"><span class="saude-total-label">Investimentos (pago)</span><span style="font-size:16px;font-weight:700;font-family:var(--mono);color:var(--purple)" id="s-inv">—</span></div>
+      <div class="saude-total" style="margin-bottom:16px"><span class="saude-total-label">Lucro líquido</span><span id="s-luc" class="saude-total-val">—</span></div>
+
+      <div class="saude-secao">Divisão do faturamento</div>
+      <div id="s-baldes"></div>
+
+      <div class="saude-secao">Diagnóstico de saúde financeira</div>
+      <div class="card card-pad">
+        <div id="s-semaforo"></div>
+      </div>
+
+      <div class="saude-secao">Recomendações de ação</div>
+      <div class="card card-pad">
+        <div id="s-recomendacoes"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 </div><!-- /shell -->
