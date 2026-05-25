@@ -248,6 +248,10 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
   .page-header-row{flex-direction:column;align-items:stretch}
   .page-header-row > button,.page-header-row > .btn{width:100%}
 
+  /* Projeção */
+  #dash-proj-kpis{grid-template-columns:1fr 1fr}
+  #dash-proj-detalhe{font-size:11px}
+
   /* Nav inferior */
   .mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:80;padding:5px 0 max(env(safe-area-inset-bottom),8px)}
   .mobile-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;font-size:9px;font-weight:600;color:var(--text3);background:none;border:none;cursor:pointer;font-family:var(--font);letter-spacing:.03em;transition:color .12s}
@@ -288,6 +292,10 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
   .login-box{padding:28px 20px;border-radius:var(--r-md)}
   .login-title{font-size:17px}
 }
+
+/* ─── PROJEÇÃO ───────────────────────────────── */
+#dash-projecao-card { border-style: dashed; border-color: var(--border2); }
+#dash-proj-kpis .kpi-card { border-style: dashed; }
 
 /* ─── SAÚDE DO NEGÓCIO ──────────────────── */
 .saude-secao{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin:18px 0 8px}
@@ -412,7 +420,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
         <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
       </select>
       <select id="sel-ano" style="font-size:13px;border:1px solid var(--border2);border-radius:var(--r-sm);padding:5px 10px;background:var(--surface);font-family:var(--font);outline:none" onchange="renderAll()">
-        <option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option>
+        <option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option>
       </select>
       <button class="icon-btn" onclick="exportCSV()" title="Exportar CSV">⬇</button>
     </div>
@@ -430,7 +438,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
         <div class="kpi-card"><div class="kpi-label">Receita do mês</div><div class="kpi-value g" id="kpi-rec">—</div><div class="kpi-footer" id="kpi-rec-f"></div></div>
         <div class="kpi-card"><div class="kpi-label">Despesas do mês</div><div class="kpi-value r" id="kpi-des">—</div><div class="kpi-footer" id="kpi-des-f"></div></div>
         <div class="kpi-card"><div class="kpi-label">Investimentos</div><div class="kpi-value p" id="kpi-inv">—</div><div class="kpi-footer" id="kpi-inv-f"></div></div>
-        <div class="kpi-card"><div class="kpi-label">Saldo em caixa</div><div class="kpi-value b" id="kpi-sal">—</div><div class="kpi-footer">apenas lançamentos pagos</div></div>
+        <div class="kpi-card"><div class="kpi-label">Caixa atual</div><div class="kpi-value b" id="kpi-sal">—</div><div class="kpi-footer" id="kpi-sal-f">entradas − saídas pagas hoje</div></div>
       </div>
       <div class="grid-2" style="margin-bottom:16px;align-items:start">
         <div class="card">
@@ -459,6 +467,16 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
           <table><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Status</th><th style="text-align:right">Valor</th></tr></thead>
           <tbody id="dash-recent"></tbody></table>
         </div>
+      </div>
+
+      <!-- PROJEÇÃO MÊS SEGUINTE -->
+      <div class="card card-pad" id="dash-projecao-card" style="margin-top:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div class="card-title" style="margin:0">📈 Projeção — <span id="dash-proj-label">próximo mês</span></div>
+          <span style="font-size:11px;color:var(--text3);font-weight:500">inclui pendentes + recorrentes futuros</span>
+        </div>
+        <div class="grid-4" style="margin-bottom:12px" id="dash-proj-kpis"></div>
+        <div id="dash-proj-detalhe" style="font-size:12px;color:var(--text2);line-height:1.7;padding:10px 12px;background:var(--surface2);border-radius:var(--r-sm)"></div>
       </div>
     </div>
 
@@ -621,7 +639,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
             <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
           </select>
           <select id="saude-ano" style="font-size:13px;border:1px solid var(--border2);border-radius:var(--r-sm);padding:5px 10px;background:var(--surface);font-family:var(--font);outline:none" onchange="renderSaude()">
-            <option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option>
+            <option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option>
           </select>
         </div>
       </div>
@@ -736,7 +754,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
           <select id="nl-mes" onchange="atualizarResumoRec()"><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select>
         </div>
         <div class="form-group w-auto" style="width:82px"><label>Ano</label>
-          <select id="nl-ano"><option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option></select>
+          <select id="nl-ano"><option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
         </div>
       </div>
 
@@ -749,7 +767,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
               <option>Venda de produto</option><option>Prestação de serviço</option><option>Contrato / Mensalidade</option><option>Comissão</option><option>Consultoria</option><option>Locação / Aluguel</option><option>Outras receitas</option>
             </optgroup>
             <optgroup label="Despesas" id="nl-cat-despesa">
-              <option>Colaboradores</option><option>Pró-labore</option><option>Despesa Pessoal</option><option>Aluguel / Espaço</option><option>Fornecedores</option><option>Marketing / Publicidade</option><option>Impostos / Taxas</option><option>Contabilidade / Juridico</option><option>Utilities (água, luz, internet)</option><option>Transporte / Logística</option><option>Plano de Saúde</option><option>Educação</option><option>Outras despesas</option>
+              <option>Colaboradores</option><option>Pró-labore</option><option>Despesa Pessoal</option><option>Aluguel / Espaço</option><option>Plataformas</option><option>Marketing / Publicidade</option><option>Impostos / Taxas</option><option>Contabilidade / Juridico</option><option>Utilities (água, luz, internet)</option><option>Transporte / Logística</option><option>Plano de Saúde</option><option>Educação</option><option>Outras despesas</option>
             </optgroup>
             <optgroup label="Investimentos" id="nl-cat-investimento">
               <option>Equipamentos / Máquinas</option><option>Tecnologia / Software</option><option>Capacitação / Cursos</option><option>Reformas / Infraestrutura</option><option>Outros investimentos</option>
@@ -830,7 +848,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
           <select id="nc-mes"><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select>
         </div>
         <div class="form-group w-auto" style="width:82px"><label>Ano</label>
-          <select id="nc-ano"><option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option></select>
+          <select id="nc-ano"><option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
         </div>
       </div>
     </div>
@@ -996,7 +1014,7 @@ const MESES_F = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','
 const CAT_COLORS = {
   'Venda de produto':'#2A7A4B','Prestação de serviço':'#1A7A6A','Contrato / Mensalidade':'#1A5FA8',
   'Comissão':'#6D3FA8','Consultoria':'#4A6A2B','Locação / Aluguel':'#3A6A8A','Outras receitas':'#888',
-  'Colaboradores':'#8E44AD','Pró-labore':'#C0392B','Despesa Pessoal':'#E67E22','Aluguel / Espaço':'#5A5A5A','Fornecedores':'#A03050',
+  'Colaboradores':'#8E44AD','Pró-labore':'#C0392B','Despesa Pessoal':'#E67E22','Aluguel / Espaço':'#5A5A5A','Plataformas':'#A03050',
   'Marketing / Publicidade':'#A05C00','Impostos / Taxas':'#7A3F1A','Contabilidade / Juridico':'#3A6A8A',
   'Utilities (água, luz, internet)':'#1A6A6A','Transporte / Logística':'#6A4A1A','Plano de Saúde':'#2980B9','Educação':'#1A7A6A','Outras despesas':'#888',
   'Equipamentos / Máquinas':'#6D3FA8','Tecnologia / Software':'#1A5FA8','Capacitação / Cursos':'#1A7A6A',
@@ -1125,8 +1143,16 @@ function fmtData(dia,mes,ano){ return String(dia||'?').padStart(2,'0')+'/'+Strin
 function sigla(nome){ return nome.trim().split(/\s+/).slice(0,2).map(p=>p[0]||'').join('').toUpperCase()||'?'; }
 function el(id){ return document.getElementById(id); }
 
-// ═══ CAIXA (só conta lançamentos pagos) ════════
-// receitas pagas + despesas pagas + investimentos pagos = saldo
+// ═══ CAIXA ═════════════════════════════════════
+// Saldo do dia: soma receitas pagas - despesas pagas - investimentos pagos do mês selecionado
+function calcSaldoDia(mes, ano) {
+  const lM = lancamentos.filter(l=>l.mes===mes && l.ano===ano);
+  const recPago = lM.filter(l=>l.tipo==='receita'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
+  const desPago = lM.filter(l=>l.tipo==='despesa'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
+  const invPago = lM.filter(l=>l.tipo==='investimento'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
+  return recPago - desPago - invPago;
+}
+// Mantido para compatibilidade com saude
 function calcCaixa() {
   const recPago = lancamentos.filter(l=>l.tipo==='receita'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
   const desPago = lancamentos.filter(l=>l.tipo==='despesa'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
@@ -1408,7 +1434,11 @@ function renderDashboard() {
   el('kpi-rec').textContent = fmtK(recM);
   el('kpi-des').textContent = fmtK(desM);
   el('kpi-inv').textContent = fmtK(invM);
-  el('kpi-sal').textContent = fmtK(calcCaixa());
+  const saldoDia = calcCaixa();
+  el('kpi-sal').textContent = fmtK(saldoDia);
+  el('kpi-sal').className = 'kpi-value ' + (saldoDia >= 0 ? 'b' : 'r');
+  const pendDes = lancamentos.filter(l=>l.tipo==='despesa'&&l.status==='Pendente').reduce((s,l)=>s+l.valor,0);
+  el('kpi-sal-f').textContent = pendDes > 0 ? fmtK(pendDes)+' pendentes' : 'saldo acumulado pago';
   el('kpi-rec-f').textContent = (recPend>0 ? fmtK(recPend)+' pendente' : 'tudo recebido');
   el('kpi-des-f').textContent = lM.filter(l=>l.tipo==='despesa').length+' lançamentos';
   el('kpi-inv-f').textContent = lM.filter(l=>l.tipo==='investimento').length+' investimento(s)';
@@ -1468,6 +1498,67 @@ function renderDashboard() {
     +'<td>'+statusBtn(l)+'</td>'
     +valorCell(l)
     +'</tr>').join('')||'<tr><td colspan="5"><div class="empty"><div class="empty-text">Nenhum lançamento</div></div></td></tr>';
+
+  // Projeção mês seguinte
+  renderProjecaoDashboard(mes, ano);
+}
+
+// ═══ PROJEÇÃO MÊS SEGUINTE ═══════════════════════
+function renderProjecaoDashboard(mesAtual, anoAtual) {
+  // Calcular próximo mês/ano
+  let proxMes = mesAtual + 1, proxAno = anoAtual;
+  if(proxMes > 12) { proxMes = 1; proxAno++; }
+
+  el('dash-proj-label').textContent = MESES_F[proxMes-1] + ' ' + proxAno;
+
+  // 1. Lançamentos já cadastrados para o próximo mês (pendentes ou pagos)
+  const lProx = lancamentos.filter(l => l.mes === proxMes && l.ano === proxAno);
+  const recProxCadastrado = lProx.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+  const desProxCadastrado = lProx.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
+  const invProxCadastrado = lProx.filter(l=>l.tipo==='investimento').reduce((s,l)=>s+l.valor,0);
+
+  // 2. Clientes ativos (MRR) — adicionar se não há lançamento recorrente já
+  const ativos = clientes.filter(c=>c.status==='ativo');
+  const mrrAtivos = ativos.reduce((s,c)=>s+c.valor, 0);
+  // Estimativa de receita de clientes ativos que ainda não têm lançamento para o próximo mês
+  const recJaCoberta = lProx.filter(l=>l.tipo==='receita'&&l.recorrente).reduce((s,l)=>s+l.valor,0);
+  const recClientesSemLanc = Math.max(0, mrrAtivos - recJaCoberta);
+
+  // 3. Média dos últimos 3 meses (para despesas) para completar estimativa
+  let totalDesUlt3 = 0, countMeses = 0;
+  for(let i=1; i<=3; i++) {
+    let m = mesAtual - i, a = anoAtual;
+    if(m <= 0) { m += 12; a--; }
+    const des = lancamentos.filter(l=>l.tipo==='despesa'&&l.mes===m&&l.ano===a).reduce((s,l)=>s+l.valor,0);
+    if(des > 0) { totalDesUlt3 += des; countMeses++; }
+  }
+  const mediaDesUlt = countMeses > 0 ? totalDesUlt3 / countMeses : desProxCadastrado;
+
+  // Totais projetados
+  const recProj = recProxCadastrado + recClientesSemLanc;
+  const desProj = Math.max(desProxCadastrado, mediaDesUlt);
+  const invProj = invProxCadastrado;
+  const saldoProj = recProj - desProj - invProj;
+
+  // KPIs
+  const kpisHtml = [
+    {label:'Receita estimada', val:recProj, cls:'g'},
+    {label:'Despesas estimadas', val:desProj, cls:'r'},
+    {label:'Investimentos', val:invProj, cls:'p'},
+    {label:'Saldo projetado', val:saldoProj, cls:saldoProj>=0?'g':'r'},
+  ].map(k=>`<div class="kpi-card" style="border-style:dashed"><div class="kpi-label">${k.label}</div><div class="kpi-value ${k.cls}" style="font-size:20px">${fmtK(k.val)}</div></div>`).join('');
+  el('dash-proj-kpis').innerHTML = kpisHtml;
+
+  // Detalhes textuais
+  const linhas = [];
+  if(recProxCadastrado > 0) linhas.push(`✅ <strong>${fmtK(recProxCadastrado)}</strong> já lançados como receita para ${MESES_F[proxMes-1]}`);
+  if(recClientesSemLanc > 0) linhas.push(`👥 <strong>${fmtK(recClientesSemLanc)}</strong> estimados via ${ativos.length} cliente(s) ativo(s) sem lançamento ainda`);
+  if(desProxCadastrado > 0) linhas.push(`📤 <strong>${fmtK(desProxCadastrado)}</strong> já lançados como despesa para ${MESES_F[proxMes-1]}`);
+  if(countMeses > 0 && desProj > desProxCadastrado) linhas.push(`📊 Despesas completadas pela média dos últimos ${countMeses} mes(es): <strong>${fmtK(mediaDesUlt)}</strong>`);
+  if(invProj > 0) linhas.push(`📈 <strong>${fmtK(invProj)}</strong> em investimentos previstos`);
+  if(linhas.length === 0) linhas.push('ℹ️ Sem dados cadastrados para o próximo mês. Lance receitas/despesas ou cadastre clientes ativos para ver a projeção.');
+
+  el('dash-proj-detalhe').innerHTML = linhas.join('<br>');
 }
 
 // ═══ LANÇAMENTOS ═══════════════════════════════
@@ -2047,11 +2138,16 @@ function renderAll() {
 (async function init(){
   // Limpar dados antigos do localStorage que possam interferir
   try { localStorage.removeItem('gf2_lanc'); localStorage.removeItem('gf2_contas'); localStorage.removeItem('gf2_equipe'); } catch(e){}
-  el('sel-mes').value=CUR_MES;
-  el('nl-mes').value=CUR_MES;
-  el('nc-mes').value=CUR_MES;
-  if(el('saude-mes')) el('saude-mes').value=CUR_MES;
-  if(el('saude-ano')) el('saude-ano').value=CUR_ANO;
+  // Definir mês e ano atuais em todos os seletores
+  el('sel-mes').value = CUR_MES;
+  el('sel-ano').value = CUR_ANO;
+  el('nl-mes').value  = CUR_MES;
+  el('nl-ano').value  = CUR_ANO;
+  el('nc-mes').value  = CUR_MES;
+  el('nc-ano').value  = CUR_ANO;
+  if(el('nl-rec-ano')) el('nl-rec-ano').value = CUR_ANO;
+  if(el('saude-mes')) el('saude-mes').value = CUR_MES;
+  if(el('saude-ano')) el('saude-ano').value = CUR_ANO;
   setNLTipo('receita');
   await checkAuth();
 })();
