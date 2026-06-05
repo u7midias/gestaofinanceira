@@ -972,6 +972,7 @@ async function doLogin() {
     if(loginErr){ errEl.textContent='Conta criada! Faça login.'; setLoginModo('entrar'); return; }
     entrarNoApp(email);
     await carregarDados();
+    await migrarPendentesVencidos();
     renderAll();
     toast('Conta criada com sucesso! Bem-vindo ✓');
     return;
@@ -984,6 +985,7 @@ async function doLogin() {
   if(error){ loginShake('login-senha','E-mail ou senha incorretos.'); return; }
   entrarNoApp(email);
   await carregarDados();
+  await migrarPendentesVencidos();
   renderAll();
 }
 
@@ -995,6 +997,7 @@ async function checkAuth() {
     const emailEl=el('sb-email-user');
     if(emailEl) emailEl.textContent=session.user.email;
     await carregarDados();
+    await migrarPendentesVencidos();
     atualizarBadgeContas();
     renderAll();
   }
@@ -1132,6 +1135,34 @@ async function dbDeleteColab(id) {
   const { error } = await sb.from('equipe').delete().eq('id',id);
   if(error){ toast('Erro ao remover: '+error.message,true); return false; }
   return true;
+}
+
+// ═══ MIGRAÇÃO AUTOMÁTICA DE PENDENTES VENCIDOS ═══
+async function migrarPendentesVencidos() {
+  // Despesas e investimentos pendentes de meses anteriores → migra para o mês atual
+  const vencidos = lancamentos.filter(l =>
+    l.status === 'Pendente' &&
+    (l.tipo === 'despesa' || l.tipo === 'investimento') &&
+    (l.ano < CUR_ANO || (l.ano === CUR_ANO && l.mes < CUR_MES))
+  );
+
+  if (vencidos.length === 0) return;
+
+  // Atualiza em lote no Supabase
+  const ids = vencidos.map(l => l.id);
+  const { error } = await sb.from('lancamentos')
+    .update({ mes: CUR_MES, ano: CUR_ANO })
+    .in('id', ids);
+
+  if (error) {
+    toast('Erro ao migrar pendentes: ' + error.message, true);
+    return;
+  }
+
+  // Atualiza array local
+  vencidos.forEach(l => { l.mes = CUR_MES; l.ano = CUR_ANO; });
+
+  toast(`${vencidos.length} despesa${vencidos.length > 1 ? 's' : ''} pendente${vencidos.length > 1 ? 's' : ''} migrada${vencidos.length > 1 ? 's' : ''} para ${MESES_F[CUR_MES-1]}/${CUR_ANO} ✓`);
 }
 
 // ═══ FORMATAÇÃO ═══════════════════════════════
