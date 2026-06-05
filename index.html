@@ -1833,26 +1833,7 @@ function renderSaude() {
     </div>
   </div>`;
 
-  // Baldes
-  const baldes = [
-    { nome:'Operação & Despesas', val:desOp, cor:'#2A7A4B', bg:'#EAF4EE', borda:'#A7D7B8', pctTxt: Math.round(pOp*100)+'% do faturamento' },
-    { nome:'Pró-labore', val:plTotal, cor:'#C0392B', bg:'#FDECEA', borda:'#E9A5A0', pctTxt: Math.round(pPL*100)+'% do faturamento' },
-    { nome:'Investimentos', val:invTotal, cor:'#6D3FA8', bg:'#F2EDFC', borda:'#C4ADD9', pctTxt: Math.round(pInv*100)+'% do faturamento' },
-    { nome:'Lucro líquido', val:lucTotal, cor: lucTotal>=0?'#185FA5':'#C0392B', bg: lucTotal>=0?'#EAF1FB':'#FDECEA', borda: lucTotal>=0?'#9AB8DC':'#E9A5A0', pctTxt: Math.round(pLuc*100)+'% do faturamento' },
-  ];
-
-  const baldesHTML = baldes.map(b=>{
-    const p = recTotal>0 ? Math.round(Math.abs(b.val)/recTotal*100) : 0;
-    return `<div class="balde-card" style="background:${b.bg};border-color:${b.borda}">
-      <div class="balde-header">
-        <span class="balde-nome" style="color:${b.cor}">${b.nome}</span>
-        <span class="balde-valor" style="color:${b.cor}">${fmt(b.val)}</span>
-      </div>
-      <div class="balde-pct" style="color:${b.cor}">${b.pctTxt}</div>
-      <div class="balde-track"><div class="balde-fill" style="width:${p}%;background:${b.cor}"></div></div>
-    </div>`;
-  }).join('');
-  el('s-baldes').innerHTML = cardFaturamento + baldesHTML;
+  el('s-baldes').innerHTML = cardFaturamento;
 
   // ── Modelo de distribuição: 50% Operação / 30% Pró-labore / 10% Reinvestimento / 10% Guardar ──
   // Metas sobre faturamento total (pago + pendente)
