@@ -1765,30 +1765,40 @@ function renderSaude() {
 
   el('saude-periodo-label').textContent = MESES_F[mes-1]+' de '+ano;
 
-  // Filtrar só o mês/ano selecionado, só pagos
-  const lMes = lancamentos.filter(l=>l.mes===mes&&l.ano===ano&&l.status==='Pago');
+  // Detectar se é mês futuro (sem nenhum lançamento pago)
+  const isMesFuturo = (ano > CUR_ANO) || (ano === CUR_ANO && mes > CUR_MES);
+  const lMesPagos    = lancamentos.filter(l=>l.mes===mes&&l.ano===ano&&l.status==='Pago');
+  const lMesTodos    = lancamentos.filter(l=>l.mes===mes&&l.ano===ano);
+  // Para meses futuros ou sem pagos, usa todos os lançamentos (pago + pendente)
+  const temPagos     = lMesPagos.length > 0;
+  const lMes         = (isMesFuturo || !temPagos) ? lMesTodos : lMesPagos;
+  const modoProjecao = isMesFuturo || (!temPagos && lMesTodos.length > 0);
 
   const recTotal = lMes.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
   const plTotal  = lMes.filter(l=>l.tipo==='despesa'&&l.cat==='Pró-labore').reduce((s,l)=>s+l.valor,0);
   const desTotal = lMes.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
-  const desOp    = desTotal - plTotal; // despesas operacionais sem pró-labore
+  const desOp    = desTotal - plTotal;
   const invTotal = lMes.filter(l=>l.tipo==='investimento').reduce((s,l)=>s+l.valor,0);
   const lucTotal = recTotal - desTotal - invTotal;
 
-  if(recTotal===0 && desTotal===0 && invTotal===0){
+  // Receitas já pagas (para separar no card de faturamento)
+  const recPago     = lMesPagos.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+  const recPendente = lMesTodos.filter(l=>l.status==='Pendente'&&l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+  const fatTotal    = recTotal; // recTotal já inclui tudo (pagos+pendentes em modo projeção, só pagos no modo real)
+
+  if(lMesTodos.length === 0){
     el('saude-score-num').textContent='—';
-    el('saude-score-label').textContent='Sem lançamentos pagos';
-    el('saude-score-sub').textContent='Lance suas receitas e despesas para ver o diagnóstico';
+    el('saude-score-label').textContent='Sem lançamentos';
+    el('saude-score-sub').textContent='Lance receitas e despesas para este mês para ver o cenário';
     el('s-rec').textContent='R$ 0,00';
     el('s-des').textContent='R$ 0,00';
     el('s-inv').textContent='R$ 0,00';
     el('s-luc').textContent='R$ 0,00';
-    el('s-baldes').innerHTML='<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Nenhum lançamento pago em '+MESES_F[mes-1]+'/'+ano+'</div></div>';
-    el('s-semaforo').innerHTML='<div style="font-size:13px;color:var(--text2);padding:8px 0">Adicione lançamentos e marque como <strong>Pago</strong> para ver o semáforo.</div>';
+    el('s-baldes').innerHTML='<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Nenhum lançamento em '+MESES_F[mes-1]+'/'+ano+'</div></div>';
+    el('s-semaforo').innerHTML='<div style="font-size:13px;color:var(--text2);padding:8px 0">Adicione lançamentos para ver o cenário deste mês.</div>';
     el('s-recomendacoes').innerHTML=`
-      <div class="rec-row"><span class="rec-num">01</span><div><div class="rec-titulo">Registre todas as receitas do mês</div><div class="rec-detalhe">Lance cada entrada de dinheiro mesmo que seja pequena. O controle começa pelo registro fiel.</div></div></div>
-      <div class="rec-row"><span class="rec-num">02</span><div><div class="rec-titulo">Registre todas as despesas</div><div class="rec-detalhe">Aluguel, salários, ferramentas, impostos — tudo precisa estar registrado para o diagnóstico ser preciso.</div></div></div>
-      <div class="rec-row"><span class="rec-num">03</span><div><div class="rec-titulo">Marque os lançamentos como Pago</div><div class="rec-detalhe">A saúde do negócio é calculada com base apenas nos valores já recebidos ou pagos. Clique no badge de status para confirmar.</div></div></div>
+      <div class="rec-row"><span class="rec-num">01</span><div><div class="rec-titulo">Registre as receitas previstas</div><div class="rec-detalhe">Lance as receitas esperadas para o mês, mesmo como Pendente. O sistema usará esses valores para montar o cenário.</div></div></div>
+      <div class="rec-row"><span class="rec-num">02</span><div><div class="rec-titulo">Registre as despesas previstas</div><div class="rec-detalhe">Aluguel, salários, ferramentas — registre tudo que você já sabe que vai pagar.</div></div></div>
     `;
     el('saude-alerta').style.display='none';
     return;
@@ -1800,24 +1810,44 @@ function renderSaude() {
   el('s-luc').textContent = fmt(lucTotal);
   el('s-luc').style.color = lucTotal>=0?'var(--green)':'var(--red)';
 
-  // Percentuais sobre receita
+  // Percentuais sobre receita total
   const pOp  = recTotal>0 ? desOp/recTotal : 0;
   const pPL  = recTotal>0 ? plTotal/recTotal : 0;
   const pInv = recTotal>0 ? invTotal/recTotal : 0;
   const pLuc = recTotal>0 ? lucTotal/recTotal : 0;
-  const pOp3 = pOp; // mês a mês não tem média
+  const pOp3 = pOp;
 
-  // ── Faturamento: pago + a receber no mês ─────────────────────────────
-  const recPendente = lancamentos.filter(l=>l.status==='Pendente'&&l.tipo==='receita'&&l.mes===mes&&l.ano===ano).reduce((s,l)=>s+l.valor,0);
-  const fatTotal    = recTotal + recPendente;
-
-  const cardFaturamento = `
+  const cardFaturamento = modoProjecao ? `
+  <div style="background:var(--surface);border:1.5px dashed var(--amber);border-radius:var(--r-lg);padding:16px 20px;margin-bottom:16px;box-shadow:var(--shadow)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Faturamento do mês</span>
+      <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--amber);color:#fff">📅 CENÁRIO PROJETADO</span>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Valores baseados em lançamentos pendentes — o cenário vai se confirmando conforme você marca como Pago.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div style="background:var(--green-bg);border-radius:var(--r-sm);padding:12px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:var(--green);margin-bottom:4px">✅ JÁ RECEBIDO</div>
+        <div style="font-size:17px;font-weight:700;color:var(--green);font-family:var(--mono)">${fmt(recPago)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">lançamentos pagos</div>
+      </div>
+      <div style="background:var(--amber-bg);border-radius:var(--r-sm);padding:12px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:var(--amber);margin-bottom:4px">⏳ A RECEBER</div>
+        <div style="font-size:17px;font-weight:700;color:var(--amber);font-family:var(--mono)">${fmt(recPendente)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">lançamentos pendentes</div>
+      </div>
+      <div style="background:var(--blue-bg);border-radius:var(--r-sm);padding:12px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:var(--blue);margin-bottom:4px">📊 TOTAL PROJETADO</div>
+        <div style="font-size:17px;font-weight:700;color:var(--blue);font-family:var(--mono)">${fmt(fatTotal)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">pago + pendente</div>
+      </div>
+    </div>
+  </div>` : `
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 20px;margin-bottom:16px;box-shadow:var(--shadow)">
     <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">Faturamento do mês</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
       <div style="background:var(--green-bg);border-radius:var(--r-sm);padding:12px;text-align:center">
         <div style="font-size:10px;font-weight:600;color:var(--green);margin-bottom:4px">✅ JÁ RECEBIDO</div>
-        <div style="font-size:17px;font-weight:700;color:var(--green);font-family:var(--mono)">${fmt(recTotal)}</div>
+        <div style="font-size:17px;font-weight:700;color:var(--green);font-family:var(--mono)">${fmt(recPago)}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:2px">lançamentos pagos</div>
       </div>
       <div style="background:var(--amber-bg);border-radius:var(--r-sm);padding:12px;text-align:center">
@@ -1828,7 +1858,7 @@ function renderSaude() {
       <div style="background:var(--blue-bg);border-radius:var(--r-sm);padding:12px;text-align:center">
         <div style="font-size:10px;font-weight:600;color:var(--blue);margin-bottom:4px">📊 TOTAL DO MÊS</div>
         <div style="font-size:17px;font-weight:700;color:var(--blue);font-family:var(--mono)">${fmt(fatTotal)}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">faturamento projetado</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">faturamento confirmado</div>
       </div>
     </div>
   </div>`;
@@ -1858,8 +1888,9 @@ function renderSaude() {
   const sOp   = pOpFat <= META_OP ? 'verde' : pOpFat <= META_OP*1.2 ? 'amarelo' : 'vermelho';
   const sMar  = margem >= 0.20 ? 'verde' : margem >= 0 ? 'amarelo' : 'vermelho';
   const sInv  = pInvFat >= META_REIN ? 'verde' : pInvFat > 0 ? 'amarelo' : 'vermelho';
+  // Em mês futuro pendentes são esperados — não penalizar
   const pendentes = recPendente;
-  const sPend = pendentes===0 ? 'verde' : pendentes < recTotal*0.5 ? 'amarelo' : 'vermelho';
+  const sPend = modoProjecao ? 'verde' : (pendentes===0 ? 'verde' : pendentes < recPago*0.5 ? 'amarelo' : 'vermelho');
   const sContas = contas.filter(c=>{const d=new Date(c.ano,c.mes-1,c.dia||1);return d<new Date();}).length;
   const sCont = sContas===0 ? 'verde' : sContas<=2 ? 'amarelo' : 'vermelho';
 
@@ -1871,21 +1902,27 @@ function renderSaude() {
   }
 
   el('s-semaforo').innerHTML =
+    (modoProjecao ? `<div style="font-size:11px;color:var(--amber);font-weight:600;padding:4px 0 8px;display:flex;align-items:center;gap:6px"><span>📅</span> Semáforo baseado no cenário projetado (lançamentos pendentes)</div>` : '') +
     semRow(sOp,  'Custo operacional vs faturamento ('+Math.round(pOpFat*100)+'% — meta: 50%)') +
     semRow(sMar, 'Margem de lucro líquida ('+Math.round(margem*100)+'%)') +
     semRow(sInv, 'Reinvestimento na empresa ('+Math.round(pInvFat*100)+'% — meta: 10%)') +
-    semRow(sPend,'Recebimentos pendentes ('+fmt(pendentes)+')') +
+    (!modoProjecao ? semRow(sPend,'Recebimentos pendentes ('+fmt(pendentes)+')') : '') +
     semRow(sCont,'Contas vencidas ('+sContas+' conta'+(sContas!==1?'s':'')+')');
 
   // Score geral 0–100
   const scores = {verde:100,amarelo:50,vermelho:0};
-  const scoreTotal = Math.round((scores[sOp]+scores[sMar]+scores[sInv]+scores[sPend]+scores[sCont])/5);
-  const scoreLabel = scoreTotal>=80?'Excelente':scoreTotal>=60?'Bom':scoreTotal>=40?'Regular':'Atenção necessária';
+  const scoreItems = modoProjecao
+    ? [scores[sOp], scores[sMar], scores[sInv], scores[sCont]]
+    : [scores[sOp], scores[sMar], scores[sInv], scores[sPend], scores[sCont]];
+  const scoreTotal = Math.round(scoreItems.reduce((a,b)=>a+b,0) / scoreItems.length);
+  const scoreLabel = modoProjecao
+    ? (scoreTotal>=80?'Cenário positivo':scoreTotal>=60?'Cenário razoável':scoreTotal>=40?'Atenção ao cenário':'Cenário preocupante')
+    : (scoreTotal>=80?'Excelente':scoreTotal>=60?'Bom':scoreTotal>=40?'Regular':'Atenção necessária');
   const scoreCor   = scoreTotal>=80?'var(--green)':scoreTotal>=60?'var(--blue)':scoreTotal>=40?'var(--amber)':'var(--red)';
   el('saude-score-num').textContent = scoreTotal;
   el('saude-score-num').style.color = scoreCor;
   el('saude-score-label').textContent = scoreLabel;
-  el('saude-score-sub').textContent = 'de 100 pontos possíveis';
+  el('saude-score-sub').textContent = modoProjecao ? 'cenário projetado' : 'de 100 pontos possíveis';
 
   // Alerta
   const alertEl = el('saude-alerta');
@@ -1902,87 +1939,59 @@ function renderSaude() {
   // ── Recomendações baseadas no modelo 50/30/10/10 ──────────────────────
   const recs = [];
 
+  // Helpers para projeção por balde
+  const faltaOp   = Math.max(0, metaOp   - desOp);
+  const faltaPL   = Math.max(0, metaPL   - plTotal);
+  const faltaRein = Math.max(0, metaRein - invTotal);
+  const faltaGuar = metaGuar; // guardar é sempre meta — não há lançamento para comparar
+
+  function baldeProjRow(icone, label, meta, cor, bg, borda, realizado, falta, nota) {
+    const pct = fatTotal > 0 ? Math.round(realizado / fatTotal * 100) : 0;
+    const pctMeta = fatTotal > 0 ? Math.round(meta / fatTotal * 100) : 0;
+    const ok = realizado >= meta * 0.98;
+    const barW = Math.min(realizado / Math.max(meta, 0.01) * 100, 100);
+    return `
+    <div style="background:${bg};border:1.5px solid ${borda};border-radius:var(--r-md);padding:14px 16px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+            <span style="font-size:14px">${icone}</span>
+            <span style="font-size:12px;font-weight:700;color:${cor}">${label}</span>
+            <span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:20px;background:${cor};color:#fff;opacity:.85">${pctMeta}% do fat.</span>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:8px">${nota}</div>
+          <div style="height:5px;background:var(--border);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${barW}%;background:${cor};border-radius:4px;transition:width .3s"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:var(--text3)">
+            <span>Realizado: <strong style="color:${cor}">${fmt(realizado)}</strong> (${pct}%)</span>
+            ${falta > 0 ? `<span style="color:var(--amber);font-weight:600">falta ${fmt(falta)}</span>` : `<span style="color:#2A7A4B;font-weight:600">✓ atingido</span>`}
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Sugestão</div>
+          <div style="font-size:20px;font-weight:800;color:${cor};font-family:var(--mono);line-height:1">${fmt(meta)}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
   // Bloco principal: Distribuição sugerida do faturamento
   const distEl = `
   <div style="margin-top:12px">
-    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;padding:8px 10px;background:var(--blue-bg);border-radius:var(--r-sm);border-left:3px solid var(--blue)">
-      📐 Modelo de distribuição aplicado sobre o faturamento do mês: <strong>${fmt(fatTotal)}</strong>
+    <div style="padding:10px 12px;background:${modoProjecao?'var(--amber-bg)':'var(--blue-bg)'};border-radius:var(--r-sm);border-left:3px solid ${modoProjecao?'var(--amber)':'var(--blue)'};margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:${modoProjecao?'var(--amber)':'var(--blue)'};margin-bottom:4px">${modoProjecao?'📅 Cenário projetado para '+MESES_F[mes-1]+'/'+ano:'📐 Distribuição baseada no faturamento de '+MESES_F[mes-1]+'/'+ano}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--text2)">
+        <span>✅ Já recebido: <strong style="color:var(--green)">${fmt(recPago)}</strong></span>
+        <span>⏳ A receber: <strong style="color:var(--amber)">${fmt(recPendente)}</strong></span>
+        <span>📊 Total projetado: <strong style="color:var(--blue)">${fmt(fatTotal)}</strong></span>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">${modoProjecao?'Baseado nos lançamentos pendentes — o cenário se confirma à medida que você marca como Pago.':'Os valores sugeridos abaixo consideram tudo que você vai receber este mês.'}</div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-      <!-- Operação 50% -->
-      <div style="background:${pOpFat<=META_OP?'var(--green-bg)':'var(--red-bg)'};border-radius:var(--r-sm);padding:12px;border:1.5px solid ${pOpFat<=META_OP?'#A7D7B8':'#E9A5A0'}">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div style="font-size:10px;font-weight:700;color:${pOpFat<=META_OP?'var(--green)':'var(--red)'};letter-spacing:.03em">🏢 CUSTO OPERACIONAL</div>
-          <div style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:20px;background:${pOpFat<=META_OP?'var(--green)':'var(--red)'};color:#fff">META: 50%</div>
-        </div>
-        <div style="font-size:18px;font-weight:800;color:${pOpFat<=META_OP?'var(--green)':'var(--red)'};font-family:var(--mono)">${fmt(metaOp)}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:4px">Você gastou: <strong style="color:${pOpFat<=META_OP?'var(--green)':'var(--red)'};font-family:var(--mono)">${fmt(desOp)}</strong> (${Math.round(pOpFat*100)}%) <span style="color:var(--text3)">(sem pró-labore)</span></div>
-        <div style="margin-top:6px;height:4px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.min(pOpFat/META_OP*100,100)}%;background:${pOpFat<=META_OP?'var(--green)':'var(--red)'};border-radius:4px"></div></div>
-      </div>
-      <!-- Pró-labore 30% -->
-      <div style="background:var(--amber-bg);border-radius:var(--r-sm);padding:12px;border:1.5px solid #F5C97A">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div style="font-size:10px;font-weight:700;color:var(--amber);letter-spacing:.03em">💼 PRÓ-LABORE</div>
-          <div style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:20px;background:var(--amber);color:#fff">META: 30%</div>
-        </div>
-        <div style="font-size:18px;font-weight:800;color:var(--amber);font-family:var(--mono)">${fmt(metaPL)}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:4px">Você retirou: <strong style="color:${pPLFat>=META_PL*0.8?'var(--green)':'var(--amber)'};font-family:var(--mono)">${fmt(plTotal)}</strong> (${Math.round(pPLFat*100)}%)</div>
-        <div style="margin-top:6px;height:4px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.min(pPLFat/META_PL*100,100)}%;background:var(--amber);border-radius:4px"></div></div>
-      </div>
-      <!-- Reinvestimento 10% -->
-      <div style="background:var(--purple-bg);border-radius:var(--r-sm);padding:12px;border:1.5px solid #C4ADD9">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div style="font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.03em">🔄 REINVESTIMENTO</div>
-          <div style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:20px;background:var(--purple);color:#fff">META: 10%</div>
-        </div>
-        <div style="font-size:18px;font-weight:800;color:var(--purple);font-family:var(--mono)">${fmt(metaRein)}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:4px">Você investiu: <strong style="color:var(--purple);font-family:var(--mono)">${fmt(invTotal)}</strong> (${Math.round(pInvFat*100)}%)</div>
-        <div style="margin-top:6px;height:4px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.min(pInvFat/META_REIN*100,100)}%;background:var(--purple);border-radius:4px"></div></div>
-      </div>
-      <!-- Guardar 10% -->
-      <div style="background:var(--blue-bg);border-radius:var(--r-sm);padding:12px;border:1.5px solid #9AB8DC">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.03em">🏦 GUARDAR / RESERVA</div>
-          <div style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:20px;background:var(--blue);color:#fff">META: 10%</div>
-        </div>
-        <div style="font-size:18px;font-weight:800;color:var(--blue);font-family:var(--mono)">${fmt(metaGuar)}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:4px">Guarde como reserva de emergência</div>
-        <div style="margin-top:6px;font-size:10px;color:var(--text3)">10% × ${fmt(fatTotal)}</div>
-      </div>
-    </div>
-    <!-- Barra visual total -->
-    <div style="background:var(--surface2);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:8px">
-      <div style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.05em;margin-bottom:8px;text-transform:uppercase">Distribuição ideal do faturamento</div>
-      <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;gap:1px">
-        <div style="flex:50;background:#2A7A4B" title="Operação 50%"></div>
-        <div style="flex:30;background:#A05C00" title="Pró-labore 30%"></div>
-        <div style="flex:10;background:#6D3FA8" title="Reinvestimento 10%"></div>
-        <div style="flex:10;background:#1A5FA8" title="Guardar 10%"></div>
-      </div>
-      <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
-        <span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#2A7A4B;display:inline-block"></span>Operação 50%</span>
-        <span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#A05C00;display:inline-block"></span>Pró-labore 30%</span>
-        <span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#6D3FA8;display:inline-block"></span>Reinvestimento 10%</span>
-        <span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#1A5FA8;display:inline-block"></span>Guardar 10%</span>
-      </div>
-    </div>
-    <!-- Composição do faturamento -->
-    <div style="background:var(--surface2);border-radius:var(--r-sm);padding:10px 12px">
-      <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Composição do faturamento</div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
-        <span style="color:var(--text2)">✅ Já recebido</span>
-        <span style="font-weight:600;color:var(--green);font-family:var(--mono)">${fmt(recTotal)}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
-        <span style="color:var(--text2)">⏳ A receber</span>
-        <span style="font-weight:600;color:var(--amber);font-family:var(--mono)">${fmt(recPendente)}</span>
-      </div>
-      <div style="height:1px;background:var(--border);margin:5px 0"></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px">
-        <span style="color:var(--text2);font-weight:600">Total do mês</span>
-        <span style="font-weight:700;color:var(--blue);font-family:var(--mono)">${fmt(fatTotal)}</span>
-      </div>
-    </div>
+    ${baldeProjRow('🏢','Custo Operacional', metaOp, '#2A7A4B','#EAF4EE','#A7D7B8', desOp, faltaOp, 'Todas as despesas do negócio exceto pró-labore')}
+    ${baldeProjRow('💼','Pró-labore', metaPL, '#A05C00','#FDF4E7','#F5C97A', plTotal, faltaPL, 'Sua retirada pessoal como sócio/dono')}
+    ${baldeProjRow('🔄','Reinvestimento', metaRein, '#6D3FA8','#F2EDFC','#C4ADD9', invTotal, faltaRein, 'Tecnologia, capacitação, melhorias no negócio')}
+    ${baldeProjRow('🏦','Guardar / Reserva', metaGuar, '#185FA5','#EAF1FB','#9AB8DC', 0, faltaGuar, 'Reserva de emergência — guarde todo mês')}
   </div>`;
 
   recs.push({
