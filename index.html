@@ -658,7 +658,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
 
       <div id="saude-alerta" style="display:none" class="alerta-saude"></div>
 
-      <div class="saude-total"><span class="saude-total-label">Receita total (pago)</span><span class="saude-total-val" id="s-rec">—</span></div>
+      <div class="saude-total"><span class="saude-total-label">Faturamento (pago + a receber)</span><span class="saude-total-val" id="s-rec">—</span></div>
       <div class="saude-total"><span class="saude-total-label">Despesas (pago)</span><span style="font-size:16px;font-weight:700;font-family:var(--mono);color:var(--red)" id="s-des">—</span></div>
       <div class="saude-total"><span class="saude-total-label">Investimentos (pago)</span><span style="font-size:16px;font-weight:700;font-family:var(--mono);color:var(--purple)" id="s-inv">—</span></div>
       <div class="saude-total" style="margin-bottom:16px"><span class="saude-total-label">Lucro líquido</span><span id="s-luc" class="saude-total-val">—</span></div>
@@ -1784,7 +1784,8 @@ function renderSaude() {
   // Receitas já pagas (para separar no card de faturamento)
   const recPago     = lMesPagos.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
   const recPendente = lMesTodos.filter(l=>l.status==='Pendente'&&l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
-  const fatTotal    = recTotal; // recTotal já inclui tudo (pagos+pendentes em modo projeção, só pagos no modo real)
+  // fatTotal = pago + a receber → base SEMPRE completa para distribuição
+  const fatTotal    = recPago + recPendente;
 
   if(lMesTodos.length === 0){
     el('saude-score-num').textContent='—';
@@ -1804,7 +1805,7 @@ function renderSaude() {
     return;
   }
 
-  el('s-rec').textContent = fmt(recTotal);
+  el('s-rec').textContent = fmt(fatTotal);
   el('s-des').textContent = fmt(desTotal);
   el('s-inv').textContent = fmt(invTotal);
   el('s-luc').textContent = fmt(lucTotal);
@@ -1858,7 +1859,7 @@ function renderSaude() {
       <div style="background:var(--blue-bg);border-radius:var(--r-sm);padding:12px;text-align:center">
         <div style="font-size:10px;font-weight:600;color:var(--blue);margin-bottom:4px">📊 TOTAL DO MÊS</div>
         <div style="font-size:17px;font-weight:700;color:var(--blue);font-family:var(--mono)">${fmt(fatTotal)}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">faturamento confirmado</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">base da distribuição</div>
       </div>
     </div>
   </div>`;
@@ -1986,7 +1987,7 @@ function renderSaude() {
         <span>⏳ A receber: <strong style="color:var(--amber)">${fmt(recPendente)}</strong></span>
         <span>📊 Total projetado: <strong style="color:var(--blue)">${fmt(fatTotal)}</strong></span>
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">${modoProjecao?'Baseado nos lançamentos pendentes — o cenário se confirma à medida que você marca como Pago.':'Os valores sugeridos abaixo consideram tudo que você vai receber este mês.'}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">${modoProjecao?'Baseado nos lançamentos pendentes — o cenário se confirma à medida que você marca como Pago.':'A distribuição considera o faturamento completo do mês: pago + a receber.'}</div>
     </div>
     ${baldeProjRow('🏢','Custo Operacional', metaOp, '#2A7A4B','#EAF4EE','#A7D7B8', desOp, faltaOp, 'Todas as despesas do negócio exceto pró-labore')}
     ${baldeProjRow('💼','Pró-labore', metaPL, '#A05C00','#FDF4E7','#F5C97A', plTotal, faltaPL, 'Sua retirada pessoal como sócio/dono')}
