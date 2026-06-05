@@ -269,7 +269,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
   .grid-4{grid-template-columns:1fr 1fr}
   .grid-3{grid-template-columns:1fr}
   .kpi-value{font-size:16px}
-  .tb-right select:first-child{display:none}
+  .tb-right select{font-size:11px;padding:4px 5px}
 }
 
 /* ─── LOGIN ─────────────────────────────────── */
@@ -1139,10 +1139,9 @@ async function dbDeleteColab(id) {
 
 // ═══ MIGRAÇÃO AUTOMÁTICA DE PENDENTES VENCIDOS ═══
 async function migrarPendentesVencidos() {
-  // Despesas e investimentos pendentes de meses anteriores → migra para o mês atual
+  // Todos os lançamentos pendentes de meses anteriores → migra para o mês atual
   const vencidos = lancamentos.filter(l =>
     l.status === 'Pendente' &&
-    (l.tipo === 'despesa' || l.tipo === 'investimento') &&
     (l.ano < CUR_ANO || (l.ano === CUR_ANO && l.mes < CUR_MES))
   );
 
@@ -1162,7 +1161,8 @@ async function migrarPendentesVencidos() {
   // Atualiza array local
   vencidos.forEach(l => { l.mes = CUR_MES; l.ano = CUR_ANO; });
 
-  toast(`${vencidos.length} despesa${vencidos.length > 1 ? 's' : ''} pendente${vencidos.length > 1 ? 's' : ''} migrada${vencidos.length > 1 ? 's' : ''} para ${MESES_F[CUR_MES-1]}/${CUR_ANO} ✓`);
+  const n = vencidos.length;
+  toast(`${n} lançamento${n > 1 ? 's' : ''} pendente${n > 1 ? 's' : ''} migrado${n > 1 ? 's' : ''} para ${MESES_F[CUR_MES-1]}/${CUR_ANO} ✓`);
 }
 
 // ═══ FORMATAÇÃO ═══════════════════════════════
