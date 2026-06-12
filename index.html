@@ -422,10 +422,10 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
       <span class="tb-title" id="tb-title">Dashboard</span>
     </div>
     <div class="tb-right">
-      <select id="sel-mes" style="font-size:13px;border:1px solid var(--border2);border-radius:var(--r-sm);padding:5px 10px;background:var(--surface);font-family:var(--font);outline:none" onchange="renderAll()">
+      <select id="sel-mes" style="font-size:13px;border:1px solid var(--border2);border-radius:var(--r-sm);padding:5px 10px;background:var(--surface);font-family:var(--font);outline:none" onchange="sincronizarPeriodo()">
         <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
       </select>
-      <select id="sel-ano" style="font-size:13px;border:1px solid var(--border2);border-radius:var(--r-sm);padding:5px 10px;background:var(--surface);font-family:var(--font);outline:none" onchange="renderAll()">
+      <select id="sel-ano" style="font-size:13px;border:1px solid var(--border2);border-radius:var(--r-sm);padding:5px 10px;background:var(--surface);font-family:var(--font);outline:none" onchange="sincronizarPeriodo()">
         <option>2020</option><option>2021</option><option>2022</option><option>2023</option><option>2024</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option>
       </select>
       <button class="icon-btn" onclick="exportCSV()" title="Exportar CSV">⬇</button>
@@ -478,8 +478,8 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
       <!-- PROJEÇÃO MÊS SEGUINTE -->
       <div class="card card-pad" id="dash-projecao-card" style="margin-top:16px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-          <div class="card-title" style="margin:0">📈 Projeção — <span id="dash-proj-label">próximo mês</span></div>
-          <span style="font-size:11px;color:var(--text3);font-weight:500">inclui pendentes + recorrentes futuros</span>
+          <div class="card-title" style="margin:0">📈 Projeção — <span id="dash-proj-label">mês selecionado</span></div>
+          <span style="font-size:11px;color:var(--text3);font-weight:500">pagos + pendentes + clientes ativos · clique nos meses do gráfico</span>
         </div>
         <div class="grid-4" style="margin-bottom:12px" id="dash-proj-kpis"></div>
         <div id="dash-proj-detalhe" style="font-size:12px;color:var(--text2);line-height:1.7;padding:10px 12px;background:var(--surface2);border-radius:var(--r-sm)"></div>
@@ -659,8 +659,8 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
       <div id="saude-alerta" style="display:none" class="alerta-saude"></div>
 
       <div class="saude-total"><span class="saude-total-label">Faturamento (pago + a receber)</span><span class="saude-total-val" id="s-rec">—</span></div>
-      <div class="saude-total"><span class="saude-total-label">Despesas (pago)</span><span style="font-size:16px;font-weight:700;font-family:var(--mono);color:var(--red)" id="s-des">—</span></div>
-      <div class="saude-total"><span class="saude-total-label">Investimentos (pago)</span><span style="font-size:16px;font-weight:700;font-family:var(--mono);color:var(--purple)" id="s-inv">—</span></div>
+      <div class="saude-total"><span class="saude-total-label">Despesas (pagas + pendentes)</span><span style="font-size:16px;font-weight:700;font-family:var(--mono);color:var(--red)" id="s-des">—</span></div>
+      <div class="saude-total"><span class="saude-total-label">Investimentos (pagos + pendentes)</span><span style="font-size:16px;font-weight:700;font-family:var(--mono);color:var(--purple)" id="s-inv">—</span></div>
       <div class="saude-total" style="margin-bottom:16px"><span class="saude-total-label">Lucro líquido</span><span id="s-luc" class="saude-total-val">—</span></div>
 
       <div class="saude-secao">Divisão do faturamento</div>
@@ -1201,10 +1201,10 @@ function nav(screen, btn, mobile=false) {
   if(btn) btn.classList.add('active');
   if(mobile) closeSidebar();
   el('content').scrollTop = 0;
-  // set saude selects to current month before rendering
+  // sincroniza o mês da Saúde com o mês selecionado no Dashboard
   if(screen==='saude'){
     const sm=el('saude-mes'), sa=el('saude-ano');
-    if(sm && !sm._initialized){ sm.value=CUR_MES; sa.value=CUR_ANO; sm._initialized=true; }
+    if(sm && sa){ sm.value=getMes(); sa.value=getAno(); }
   }
   renderAll();
 }
@@ -1480,36 +1480,46 @@ function renderDashboard() {
   el('kpi-des-f').textContent = lM.filter(l=>l.tipo==='despesa').length+' lançamentos';
   el('kpi-inv-f').textContent = lM.filter(l=>l.tipo==='investimento').length+' investimento(s)';
 
-  // Chart anual
+  // Chart anual — pagos (sólido) + pendentes (translúcido) e meses clicáveis
   const lAno = lancamentos.filter(l=>l.ano===ano);
+  const soma=(m,tipo,status)=>lAno.filter(l=>l.tipo===tipo&&l.mes===m&&(!status||l.status===status)).reduce((s,l)=>s+l.valor,0);
   const maxV = Math.max(1,...MESES.map((_,i)=>{
     const m=i+1;
-    return Math.max(
-      lAno.filter(l=>l.tipo==='receita'&&l.status==='Pago'&&l.mes===m).reduce((s,l)=>s+l.valor,0),
-      lAno.filter(l=>l.tipo==='despesa'&&l.status==='Pago'&&l.mes===m).reduce((s,l)=>s+l.valor,0)
-    );
+    return Math.max(soma(m,'receita'), soma(m,'despesa'));
   }));
   const barsEl=el('chart-bars');
   barsEl.innerHTML='';
   const BAR_H = 108;
   MESES.forEach((lbl,i)=>{
     const m=i+1;
-    const r=lAno.filter(l=>l.tipo==='receita'&&l.status==='Pago'&&l.mes===m).reduce((s,l)=>s+l.valor,0);
-    const d=lAno.filter(l=>l.tipo==='despesa'&&l.status==='Pago'&&l.mes===m).reduce((s,l)=>s+l.valor,0);
-    const inv=lAno.filter(l=>l.tipo==='investimento'&&l.status==='Pago'&&l.mes===m).reduce((s,l)=>s+l.valor,0);
-    const hR=Math.round(r/maxV*110), hD=Math.round(d/maxV*110), hI=Math.round(inv/maxV*110);
+    const rP=soma(m,'receita','Pago'),      rPe=soma(m,'receita','Pendente');
+    const dP=soma(m,'despesa','Pago'),      dPe=soma(m,'despesa','Pendente');
+    const iP=soma(m,'investimento','Pago'), iPe=soma(m,'investimento','Pendente');
     const isCur=m===mes;
     const col=document.createElement('div'); col.className='bar-col';
+    col.style.cursor='pointer';
+    col.title='Ver projeção de '+MESES_F[i]+'/'+ano+' (inclui pendentes)';
+    col.onclick=()=>selecionarMesChart(m);
     if(isCur){ col.style.outline='2px solid var(--border2)'; col.style.borderRadius='6px'; col.style.padding='2px'; }
     const grp=document.createElement('div'); grp.className='bar-group';
     const w='calc(33% - 1px)';
-    const bR=document.createElement('div'); bR.className='bar-seg';
-    bR.style.cssText='width:'+w+';height:'+Math.round(Math.max(hR,r>0?3:0))+'px;background:var(--green);opacity:'+(r>0?.82:.1)+';flex:none';
-    const bD=document.createElement('div'); bD.className='bar-seg';
-    bD.style.cssText='width:'+w+';height:'+Math.round(Math.max(hD,d>0?3:0))+'px;background:var(--red);opacity:'+(d>0?.78:.1)+';flex:none';
-    const bI=document.createElement('div'); bI.className='bar-seg';
-    bI.style.cssText='width:'+w+';height:'+Math.round(Math.max(hI,inv>0?3:0))+'px;background:var(--purple);opacity:'+(inv>0?.72:.1)+';flex:none';
-    grp.appendChild(bR); grp.appendChild(bD); grp.appendChild(bI);
+    const mkSeg=(pago,pend,cor)=>{
+      const seg=document.createElement('div');
+      seg.style.cssText='width:'+w+';flex:none;display:flex;flex-direction:column;justify-content:flex-end;gap:1px';
+      if(pend>0){
+        const t=document.createElement('div');
+        t.style.cssText='height:'+Math.max(Math.round(pend/maxV*110),3)+'px;background:'+cor+';opacity:.28;border-radius:3px 3px 0 0';
+        seg.appendChild(t);
+      }
+      const hP=Math.round(pago/maxV*110);
+      const b=document.createElement('div');
+      b.style.cssText='height:'+Math.max(hP, pago>0?3:(pend>0?0:2))+'px;background:'+cor+';opacity:'+(pago>0?.82:(pend>0?0:.1))+';border-radius:'+(pend>0?'0 0 3px 3px':'3px');
+      seg.appendChild(b);
+      return seg;
+    };
+    grp.appendChild(mkSeg(rP,rPe,'var(--green)'));
+    grp.appendChild(mkSeg(dP,dPe,'var(--red)'));
+    grp.appendChild(mkSeg(iP,iPe,'var(--purple)'));
     const lbEl=document.createElement('div'); lbEl.className='bar-lbl-bottom';
     lbEl.style.color=isCur?'var(--text)':'var(--text3)';
     lbEl.textContent=lbl;
@@ -1540,47 +1550,59 @@ function renderDashboard() {
   renderProjecaoDashboard(mes, ano);
 }
 
-// ═══ PROJEÇÃO MÊS SEGUINTE ═══════════════════════
-function renderProjecaoDashboard(mesAtual, anoAtual) {
-  // Calcular próximo mês/ano
-  let proxMes = mesAtual + 1, proxAno = anoAtual;
-  if(proxMes > 12) { proxMes = 1; proxAno++; }
+// ═══ PROJEÇÃO DO MÊS SELECIONADO ═════════════════
+function selecionarMesChart(m) {
+  el('sel-mes').value = m;
+  sincronizarPeriodo();
+  const card = el('dash-projecao-card');
+  if(card) card.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
 
-  el('dash-proj-label').textContent = MESES_F[proxMes-1] + ' ' + proxAno;
+// Mantém Dashboard e Saúde do Negócio olhando para o mesmo mês
+function sincronizarPeriodo() {
+  if(el('saude-mes')) el('saude-mes').value = getMes();
+  if(el('saude-ano')) el('saude-ano').value = getAno();
+  renderAll();
+}
 
-  // 1. Lançamentos já cadastrados para o próximo mês (pendentes ou pagos)
-  const lProx = lancamentos.filter(l => l.mes === proxMes && l.ano === proxAno);
-  const recProxCadastrado = lProx.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
-  const desProxCadastrado = lProx.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
-  const invProxCadastrado = lProx.filter(l=>l.tipo==='investimento').reduce((s,l)=>s+l.valor,0);
+function renderProjecaoDashboard(mes, ano) {
+  el('dash-proj-label').textContent = MESES_F[mes-1] + ' ' + ano;
 
-  // 2. Clientes ativos (MRR) — adicionar se não há lançamento recorrente já
+  const lSel = lancamentos.filter(l => l.mes === mes && l.ano === ano);
+  const somaS = (tipo,status)=>lSel.filter(l=>l.tipo===tipo&&(!status||l.status===status)).reduce((s,l)=>s+l.valor,0);
+  const recPago = somaS('receita','Pago'),      recPend = somaS('receita','Pendente');
+  const desPago = somaS('despesa','Pago'),      desPend = somaS('despesa','Pendente');
+  const invPago = somaS('investimento','Pago'), invPend = somaS('investimento','Pendente');
+
+  const isPassado = (ano < CUR_ANO) || (ano === CUR_ANO && mes < CUR_MES);
+
+  // Clientes ativos (MRR) ainda não cobertos por lançamento recorrente do mês (só p/ mês atual/futuro)
   const ativos = clientes.filter(c=>c.status==='ativo');
   const mrrAtivos = ativos.reduce((s,c)=>s+c.valor, 0);
-  // Estimativa de receita de clientes ativos que ainda não têm lançamento para o próximo mês
-  const recJaCoberta = lProx.filter(l=>l.tipo==='receita'&&l.recorrente).reduce((s,l)=>s+l.valor,0);
-  const recClientesSemLanc = Math.max(0, mrrAtivos - recJaCoberta);
+  const recJaCoberta = lSel.filter(l=>l.tipo==='receita'&&l.recorrente).reduce((s,l)=>s+l.valor,0);
+  const recClientesSemLanc = isPassado ? 0 : Math.max(0, mrrAtivos - recJaCoberta);
 
-  // 3. Média dos últimos 3 meses (para despesas) para completar estimativa
+  // Média de despesas dos últimos 3 meses para completar estimativa (só p/ mês atual/futuro)
   let totalDesUlt3 = 0, countMeses = 0;
   for(let i=1; i<=3; i++) {
-    let m = mesAtual - i, a = anoAtual;
+    let m = mes - i, a = ano;
     if(m <= 0) { m += 12; a--; }
     const des = lancamentos.filter(l=>l.tipo==='despesa'&&l.mes===m&&l.ano===a).reduce((s,l)=>s+l.valor,0);
     if(des > 0) { totalDesUlt3 += des; countMeses++; }
   }
-  const mediaDesUlt = countMeses > 0 ? totalDesUlt3 / countMeses : desProxCadastrado;
+  const desCadastrado = desPago + desPend;
+  const mediaDesUlt = countMeses > 0 ? totalDesUlt3 / countMeses : desCadastrado;
 
-  // Totais projetados
-  const recProj = recProxCadastrado + recClientesSemLanc;
-  const desProj = Math.max(desProxCadastrado, mediaDesUlt);
-  const invProj = invProxCadastrado;
+  // Totais projetados — TODOS os lançamentos (pagos + pendentes) + estimativas
+  const recProj = recPago + recPend + recClientesSemLanc;
+  const desProj = isPassado ? desCadastrado : Math.max(desCadastrado, mediaDesUlt);
+  const invProj = invPago + invPend;
   const saldoProj = recProj - desProj - invProj;
 
   // KPIs
   const kpisHtml = [
-    {label:'Receita estimada', val:recProj, cls:'g'},
-    {label:'Despesas estimadas', val:desProj, cls:'r'},
+    {label:'Receita projetada', val:recProj, cls:'g'},
+    {label:'Despesas projetadas', val:desProj, cls:'r'},
     {label:'Investimentos', val:invProj, cls:'p'},
     {label:'Saldo projetado', val:saldoProj, cls:saldoProj>=0?'g':'r'},
   ].map(k=>`<div class="kpi-card" style="border-style:dashed"><div class="kpi-label">${k.label}</div><div class="kpi-value ${k.cls}" style="font-size:20px">${fmtK(k.val)}</div></div>`).join('');
@@ -1588,12 +1610,14 @@ function renderProjecaoDashboard(mesAtual, anoAtual) {
 
   // Detalhes textuais
   const linhas = [];
-  if(recProxCadastrado > 0) linhas.push(`✅ <strong>${fmtK(recProxCadastrado)}</strong> já lançados como receita para ${MESES_F[proxMes-1]}`);
+  if(recPago > 0) linhas.push(`✅ <strong>${fmtK(recPago)}</strong> já recebidos em ${MESES_F[mes-1]}`);
+  if(recPend > 0) linhas.push(`⏳ <strong>${fmtK(recPend)}</strong> em receitas pendentes (a receber)`);
   if(recClientesSemLanc > 0) linhas.push(`👥 <strong>${fmtK(recClientesSemLanc)}</strong> estimados via ${ativos.length} cliente(s) ativo(s) sem lançamento ainda`);
-  if(desProxCadastrado > 0) linhas.push(`📤 <strong>${fmtK(desProxCadastrado)}</strong> já lançados como despesa para ${MESES_F[proxMes-1]}`);
-  if(countMeses > 0 && desProj > desProxCadastrado) linhas.push(`📊 Despesas completadas pela média dos últimos ${countMeses} mes(es): <strong>${fmtK(mediaDesUlt)}</strong>`);
-  if(invProj > 0) linhas.push(`📈 <strong>${fmtK(invProj)}</strong> em investimentos previstos`);
-  if(linhas.length === 0) linhas.push('ℹ️ Sem dados cadastrados para o próximo mês. Lance receitas/despesas ou cadastre clientes ativos para ver a projeção.');
+  if(desPago > 0) linhas.push(`📤 <strong>${fmtK(desPago)}</strong> em despesas já pagas`);
+  if(desPend > 0) linhas.push(`🕐 <strong>${fmtK(desPend)}</strong> em despesas pendentes (a pagar)`);
+  if(!isPassado && countMeses > 0 && desProj > desCadastrado) linhas.push(`📊 Despesas completadas pela média dos últimos ${countMeses} mes(es): <strong>${fmtK(mediaDesUlt)}</strong>`);
+  if(invProj > 0) linhas.push(`📈 <strong>${fmtK(invProj)}</strong> em investimentos (pagos + previstos)`);
+  if(linhas.length === 0) linhas.push('ℹ️ Sem dados para este mês. Lance receitas/despesas (mesmo como Pendente) ou cadastre clientes ativos para ver a projeção.');
 
   el('dash-proj-detalhe').innerHTML = linhas.join('<br>');
 }
@@ -1796,14 +1820,14 @@ function renderSaude() {
 
   el('saude-periodo-label').textContent = MESES_F[mes-1]+' de '+ano;
 
-  // Detectar se é mês futuro (sem nenhum lançamento pago)
+  // Detectar se é mês futuro
   const isMesFuturo = (ano > CUR_ANO) || (ano === CUR_ANO && mes > CUR_MES);
   const lMesPagos    = lancamentos.filter(l=>l.mes===mes&&l.ano===ano&&l.status==='Pago');
   const lMesTodos    = lancamentos.filter(l=>l.mes===mes&&l.ano===ano);
-  // Para meses futuros ou sem pagos, usa todos os lançamentos (pago + pendente)
-  const temPagos     = lMesPagos.length > 0;
-  const lMes         = (isMesFuturo || !temPagos) ? lMesTodos : lMesPagos;
-  const modoProjecao = isMesFuturo || (!temPagos && lMesTodos.length > 0);
+  // SEMPRE considera todos os lançamentos (pagos + pendentes) — análise/projeção completa
+  const temPendentes = lMesTodos.some(l=>l.status==='Pendente');
+  const lMes         = lMesTodos;
+  const modoProjecao = isMesFuturo || temPendentes;
 
   const recTotal = lMes.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
   const plTotal  = lMes.filter(l=>l.tipo==='despesa'&&l.cat==='Pró-labore').reduce((s,l)=>s+l.valor,0);
