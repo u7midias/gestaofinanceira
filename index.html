@@ -1582,20 +1582,12 @@ function renderProjecaoDashboard(mes, ano) {
   const recJaCoberta = lSel.filter(l=>l.tipo==='receita'&&l.recorrente).reduce((s,l)=>s+l.valor,0);
   const recClientesSemLanc = isPassado ? 0 : Math.max(0, mrrAtivos - recJaCoberta);
 
-  // Média de despesas dos últimos 3 meses para completar estimativa (só p/ mês atual/futuro)
-  let totalDesUlt3 = 0, countMeses = 0;
-  for(let i=1; i<=3; i++) {
-    let m = mes - i, a = ano;
-    if(m <= 0) { m += 12; a--; }
-    const des = lancamentos.filter(l=>l.tipo==='despesa'&&l.mes===m&&l.ano===a).reduce((s,l)=>s+l.valor,0);
-    if(des > 0) { totalDesUlt3 += des; countMeses++; }
-  }
+  // Despesas: APENAS o que está cadastrado (pago + pendente), sem estimativa por média
   const desCadastrado = desPago + desPend;
-  const mediaDesUlt = countMeses > 0 ? totalDesUlt3 / countMeses : desCadastrado;
 
   // Totais projetados — TODOS os lançamentos (pagos + pendentes) + estimativas
   const recProj = recPago + recPend + recClientesSemLanc;
-  const desProj = isPassado ? desCadastrado : Math.max(desCadastrado, mediaDesUlt);
+  const desProj = desCadastrado;
   const invProj = invPago + invPend;
   const saldoProj = recProj - desProj - invProj;
 
@@ -1615,7 +1607,6 @@ function renderProjecaoDashboard(mes, ano) {
   if(recClientesSemLanc > 0) linhas.push(`👥 <strong>${fmtK(recClientesSemLanc)}</strong> estimados via ${ativos.length} cliente(s) ativo(s) sem lançamento ainda`);
   if(desPago > 0) linhas.push(`📤 <strong>${fmtK(desPago)}</strong> em despesas já pagas`);
   if(desPend > 0) linhas.push(`🕐 <strong>${fmtK(desPend)}</strong> em despesas pendentes (a pagar)`);
-  if(!isPassado && countMeses > 0 && desProj > desCadastrado) linhas.push(`📊 Despesas completadas pela média dos últimos ${countMeses} mes(es): <strong>${fmtK(mediaDesUlt)}</strong>`);
   if(invProj > 0) linhas.push(`📈 <strong>${fmtK(invProj)}</strong> em investimentos (pagos + previstos)`);
   if(linhas.length === 0) linhas.push('ℹ️ Sem dados para este mês. Lance receitas/despesas (mesmo como Pendente) ou cadastre clientes ativos para ver a projeção.');
 
