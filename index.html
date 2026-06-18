@@ -769,6 +769,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
             </optgroup>
             <optgroup label="Investimentos" id="nl-cat-investimento">
               <option>Equipamentos / Máquinas</option><option>Tecnologia / Software</option><option>Capacitação / Cursos</option><option>Reformas / Infraestrutura</option><option>Outros investimentos</option>
+              <option>Guardar / Reserva</option>
             </optgroup>
           </select>
         </div>
@@ -808,6 +809,7 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
         <div class="inv-fields">
           <div style="font-size:12px;font-weight:600;color:var(--purple)">📊 Sobre investimentos</div>
           <div style="font-size:12px;color:var(--text2)">Investimentos são descontados do caixa quando marcados como <strong>Pago</strong>, mas aparecem separados das despesas operacionais nos relatórios.</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:6px">🏦 Para alimentar o balde <strong>Guardar / Reserva</strong> na Saúde Financeira, escolha a categoria <strong>“Guardar / Reserva”</strong>. Esses valores entram na reserva, não no reinvestimento.</div>
         </div>
       </div>
 
@@ -1019,8 +1021,13 @@ const CAT_COLORS = {
   'Marketing / Publicidade':'#A05C00','Impostos / Taxas':'#7A3F1A','Contabilidade / Juridico':'#3A6A8A',
   'Utilities (água, luz, internet)':'#1A6A6A','Transporte / Logística':'#6A4A1A','Plano de Saúde':'#2980B9','Educação':'#1A7A6A','Outras despesas':'#888',
   'Equipamentos / Máquinas':'#6D3FA8','Tecnologia / Software':'#1A5FA8','Capacitação / Cursos':'#1A7A6A',
-  'Reformas / Infraestrutura':'#5A4A2A','Outros investimentos':'#888'
+  'Reformas / Infraestrutura':'#5A4A2A','Outros investimentos':'#888','Guardar / Reserva':'#185FA5'
 };
+// Categoria de investimento que alimenta o balde "Guardar / Reserva" (não conta como reinvestimento)
+const CAT_RESERVA = 'Guardar / Reserva';
+// Helpers: reserva (guardar) vs reinvestimento (demais investimentos)
+const isReserva  = l => l.tipo==='investimento' && l.cat===CAT_RESERVA;
+const isReinvest = l => l.tipo==='investimento' && l.cat!==CAT_RESERVA;
 const AVATAR_BG  = ['#E8F0FE','#FEE8E8','#E8FEF0','#FEF3E2','#F0E8FE'];
 const AVATAR_COL = ['#1A5FA8','#C0392B','#2A7A4B','#A05C00','#6D3FA8'];
 const now = new Date();
@@ -1440,6 +1447,7 @@ function getAno(){ return parseInt(el('sel-ano').value); }
 function tipoTag(l) {
   if(l.tipo==='receita') return '<span class="badge badge-g">Receita</span>'+(l.recorrente?'<span class="recorrente-tag">🔁 Recorrente</span>':'');
   if(l.tipo==='despesa') return '<span class="badge badge-r">Despesa</span>'+(l.recorrente?'<span class="recorrente-tag">🔁 Recorrente</span>':'');
+  if(isReserva(l)) return '<span class="badge badge-b">🏦 Reserva</span>';
   return '<span class="badge badge-p">Investimento</span>';
 }
 
@@ -1465,7 +1473,8 @@ function renderDashboard() {
   // Só conta PAGO no caixa/kpis
   const recM  = lM.filter(l=>l.tipo==='receita'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
   const desM  = lM.filter(l=>l.tipo==='despesa'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
-  const invM  = lM.filter(l=>l.tipo==='investimento'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
+  const invM  = lM.filter(l=>isReinvest(l)&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
+  const resM  = lM.filter(l=>isReserva(l)&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
   const recPend = lM.filter(l=>l.tipo==='receita'&&l.status==='Pendente').reduce((s,l)=>s+l.valor,0);
 
   el('kpi-rec').textContent = fmt(recM);
@@ -1478,7 +1487,7 @@ function renderDashboard() {
   el('kpi-sal-f').textContent = pendDes > 0 ? fmtK(pendDes)+' pendentes' : 'saldo acumulado pago';
   el('kpi-rec-f').textContent = (recPend>0 ? fmtK(recPend)+' pendente' : 'tudo recebido');
   el('kpi-des-f').textContent = lM.filter(l=>l.tipo==='despesa').length+' lançamentos';
-  el('kpi-inv-f').textContent = lM.filter(l=>l.tipo==='investimento').length+' investimento(s)';
+  el('kpi-inv-f').textContent = lM.filter(l=>isReinvest(l)).length+' investimento(s)'+(resM>0?' · 🏦 '+fmtK(resM)+' reserva':'');
 
   // Chart anual — pagos (sólido) + pendentes (translúcido) e meses clicáveis
   const lAno = lancamentos.filter(l=>l.ano===ano);
@@ -1494,7 +1503,8 @@ function renderDashboard() {
     const m=i+1;
     const rP=soma(m,'receita','Pago'),      rPe=soma(m,'receita','Pendente');
     const dP=soma(m,'despesa','Pago'),      dPe=soma(m,'despesa','Pendente');
-    const iP=soma(m,'investimento','Pago'), iPe=soma(m,'investimento','Pendente');
+    const somaReinv=(st)=>lAno.filter(l=>isReinvest(l)&&l.mes===m&&(!st||l.status===st)).reduce((s,l)=>s+l.valor,0);
+    const iP=somaReinv('Pago'), iPe=somaReinv('Pendente');
     const isCur=m===mes;
     const col=document.createElement('div'); col.className='bar-col';
     col.style.cursor='pointer';
@@ -1572,7 +1582,11 @@ function renderProjecaoDashboard(mes, ano) {
   const somaS = (tipo,status)=>lSel.filter(l=>l.tipo===tipo&&(!status||l.status===status)).reduce((s,l)=>s+l.valor,0);
   const recPago = somaS('receita','Pago'),      recPend = somaS('receita','Pendente');
   const desPago = somaS('despesa','Pago'),      desPend = somaS('despesa','Pendente');
-  const invPago = somaS('investimento','Pago'), invPend = somaS('investimento','Pendente');
+  const invPago = somaS('investimento','Pago'), invPend = somaS('investimento','Pendente'); // total invest (inclui reserva) — usado no saldo
+  const reinvPago = lSel.filter(l=>isReinvest(l)&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
+  const reinvPend = lSel.filter(l=>isReinvest(l)&&l.status==='Pendente').reduce((s,l)=>s+l.valor,0);
+  const resvPago  = lSel.filter(l=>isReserva(l)&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
+  const resvPend  = lSel.filter(l=>isReserva(l)&&l.status==='Pendente').reduce((s,l)=>s+l.valor,0);
 
   const isPassado = (ano < CUR_ANO) || (ano === CUR_ANO && mes < CUR_MES);
 
@@ -1588,14 +1602,16 @@ function renderProjecaoDashboard(mes, ano) {
   // Totais projetados — TODOS os lançamentos (pagos + pendentes) + estimativas
   const recProj = recPago + recPend + recClientesSemLanc;
   const desProj = desCadastrado;
-  const invProj = invPago + invPend;
+  const reinvProj = reinvPago + reinvPend; // só reinvestimento (KPI Investimentos)
+  const resvProj  = resvPago + resvPend;   // reserva (separada)
+  const invProj = invPago + invPend;       // total invest (inclui reserva) — reduz o saldo
   const saldoProj = recProj - desProj - invProj;
 
   // KPIs
   const kpisHtml = [
     {label:'Receita projetada', val:recProj, cls:'g'},
     {label:'Despesas projetadas', val:desProj, cls:'r'},
-    {label:'Investimentos', val:invProj, cls:'p'},
+    {label:'Investimentos', val:reinvProj, cls:'p'},
     {label:'Saldo projetado', val:saldoProj, cls:saldoProj>=0?'g':'r'},
   ].map(k=>`<div class="kpi-card" style="border-style:dashed"><div class="kpi-label">${k.label}</div><div class="kpi-value ${k.cls}" style="font-size:20px">${fmtK(k.val)}</div></div>`).join('');
   el('dash-proj-kpis').innerHTML = kpisHtml;
@@ -1607,7 +1623,8 @@ function renderProjecaoDashboard(mes, ano) {
   if(recClientesSemLanc > 0) linhas.push(`👥 <strong>${fmtK(recClientesSemLanc)}</strong> estimados via ${ativos.length} cliente(s) ativo(s) sem lançamento ainda`);
   if(desPago > 0) linhas.push(`📤 <strong>${fmtK(desPago)}</strong> em despesas já pagas`);
   if(desPend > 0) linhas.push(`🕐 <strong>${fmtK(desPend)}</strong> em despesas pendentes (a pagar)`);
-  if(invProj > 0) linhas.push(`📈 <strong>${fmtK(invProj)}</strong> em investimentos (pagos + previstos)`);
+  if(reinvProj > 0) linhas.push(`📈 <strong>${fmtK(reinvProj)}</strong> em reinvestimento (pagos + previstos)`);
+  if(resvProj > 0) linhas.push(`🏦 <strong>${fmtK(resvProj)}</strong> guardados na reserva (pagos + previstos)`);
   if(linhas.length === 0) linhas.push('ℹ️ Sem dados para este mês. Lance receitas/despesas (mesmo como Pendente) ou cadastre clientes ativos para ver a projeção.');
 
   el('dash-proj-detalhe').innerHTML = linhas.join('<br>');
@@ -1631,7 +1648,7 @@ function renderLancamentos() {
   const lista=getLancFiltrados();
   const rec = lista.filter(l=>l.tipo==='receita'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
   const des = lista.filter(l=>l.tipo==='despesa'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
-  const inv = lista.filter(l=>l.tipo==='investimento'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
+  const inv = lista.filter(l=>isReinvest(l)&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
   const luc = rec - des - inv;
   el('lanc-rec').textContent = fmt(rec);
   el('lanc-des').textContent = fmt(des);
@@ -1705,7 +1722,8 @@ function renderRelatorio() {
   // relatório conta apenas pagos
   const recA=lAno.filter(l=>l.tipo==='receita'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
   const desA=lAno.filter(l=>l.tipo==='despesa'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
-  const invA=lAno.filter(l=>l.tipo==='investimento'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
+  const invA=lAno.filter(l=>isReinvest(l)&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
+  const resA=lAno.filter(l=>isReserva(l)&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
   const lucA=recA-desA-invA;
   const marg=recA>0?Math.round(lucA/recA*100):0;
   const recL=lAno.filter(l=>l.tipo==='receita'&&l.status==='Pago');
@@ -1717,7 +1735,7 @@ function renderRelatorio() {
   el('rel-luc').className='kpi-value '+(lucA>=0?'g':'r');
   el('rel-marg').textContent='margem '+marg+'%';
   el('rel-inv').textContent=fmt(invA);
-  el('rel-inv-f').textContent=lAno.filter(l=>l.tipo==='investimento'&&l.status==='Pago').length+' investimento(s)';
+  el('rel-inv-f').textContent=lAno.filter(l=>isReinvest(l)&&l.status==='Pago').length+' investimento(s)'+(resA>0?' · 🏦 '+fmtK(resA)+' reserva':'');
   el('rel-ticket').textContent=fmt(ticket);
   el('rel-ticket-f').textContent=recL.length+' recebimentos';
 
@@ -1726,7 +1744,7 @@ function renderRelatorio() {
     const m=i+1;
     const r=lAno.filter(l=>l.tipo==='receita'&&l.status==='Pago'&&l.mes===m).reduce((s,l)=>s+l.valor,0);
     const d=lAno.filter(l=>l.tipo==='despesa'&&l.status==='Pago'&&l.mes===m).reduce((s,l)=>s+l.valor,0);
-    const v=lAno.filter(l=>l.tipo==='investimento'&&l.status==='Pago'&&l.mes===m).reduce((s,l)=>s+l.valor,0);
+    const v=lAno.filter(l=>isReinvest(l)&&l.status==='Pago'&&l.mes===m).reduce((s,l)=>s+l.valor,0);
     return {m,label:MESES_F[i],r,d,v,l:r-d-v};
   }).filter(x=>x.r>0||x.d>0||x.v>0);
 
@@ -1825,7 +1843,12 @@ function renderSaude() {
   const desTotal = lMes.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
   const desOp    = desTotal - plTotal;
   const invTotal = lMes.filter(l=>l.tipo==='investimento').reduce((s,l)=>s+l.valor,0);
-  const lucTotal = recTotal - desTotal - invTotal;
+  // ── Reserva (Guardar) — subconjunto de investimentos marcados na categoria de reserva ──
+  // A reserva é uma ALOCAÇÃO do lucro (poupança), não um custo: por isso NÃO reduz o lucro/margem.
+  // Só o reinvestimento (demais investimentos) reduz o lucro, como já era antes.
+  const resTotal   = lMes.filter(l=>l.tipo==='investimento'&&l.cat===CAT_RESERVA).reduce((s,l)=>s+l.valor,0);
+  const reinvTotal = invTotal - resTotal;
+  const lucTotal   = recTotal - desTotal - reinvTotal;
 
   // Receitas já pagas (para separar no card de faturamento)
   const recPago     = lMesPagos.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
@@ -1838,12 +1861,16 @@ function renderSaude() {
   const plPagoT    = lMesPagos.filter(l=>l.tipo==='despesa'&&l.cat==='Pró-labore').reduce((s,l)=>s+l.valor,0);
   const desOpPago  = desPagoT - plPagoT;
   const invPagoT   = lMesPagos.filter(l=>l.tipo==='investimento').reduce((s,l)=>s+l.valor,0);
-  const lucPago    = recPago - desPagoT - invPagoT;
+  const resPago    = lMesPagos.filter(l=>l.tipo==='investimento'&&l.cat===CAT_RESERVA).reduce((s,l)=>s+l.valor,0);
+  const reinvPago  = invPagoT - resPago; // reinvestimento pago (exclui reserva)
+  const lucPago    = recPago - desPagoT - reinvPago;
   const temRealizado = lMesPagos.length > 0;
   // Pendentes por balde (mostrados como "previsto", nunca como realizado)
   const desOpPend  = (desTotal - plTotal) - desOpPago;
   const plPend     = plTotal - plPagoT;
   const invPend    = invTotal - invPagoT;
+  const resPend    = resTotal - resPago;
+  const reinvPend  = invPend  - resPend;
 
   if(lMesTodos.length === 0){
     el('saude-score-num').textContent='—';
@@ -1938,7 +1965,7 @@ function renderSaude() {
 
   // % REALIZADOS (apenas pagos) sobre faturamento recebido — base do semáforo
   const pOpFat  = recPago>0 ? desOpPago/recPago : (desOpPago>0 ? 9.99 : 0);
-  const pInvFat = recPago>0 ? invPagoT/recPago : 0;
+  const pInvFat = recPago>0 ? reinvPago/recPago : 0;
   const margem  = recPago>0 ? lucPago/recPago : (lucPago<0 ? -1 : 0);
 
   // Semáforo — avaliado contra as metas do modelo, SOMENTE com lançamentos pagos
@@ -2010,8 +2037,8 @@ function renderSaude() {
   // Helpers para projeção por balde — "falta" e "atingido" consideram APENAS pagos
   const faltaOp   = Math.max(0, metaOp   - desOpPago);
   const faltaPL   = Math.max(0, metaPL   - plPagoT);
-  const faltaRein = Math.max(0, metaRein - invPagoT);
-  const faltaGuar = metaGuar; // guardar é sempre meta — não há lançamento para comparar
+  const faltaRein = Math.max(0, metaRein - reinvPago);
+  const faltaGuar = Math.max(0, metaGuar - resPago);
 
   function baldeProjRow(icone, label, meta, cor, bg, borda, realizado, falta, nota, pendente) {
     const pct = fatTotal > 0 ? Math.round(realizado / fatTotal * 100) : 0;
@@ -2059,8 +2086,8 @@ function renderSaude() {
     </div>
     ${baldeProjRow('🏢','Custo Operacional', metaOp, '#2A7A4B','#EAF4EE','#A7D7B8', desOpPago, faltaOp, 'Todas as despesas do negócio exceto pró-labore', desOpPend)}
     ${baldeProjRow('💼','Pró-labore', metaPL, '#A05C00','#FDF4E7','#F5C97A', plPagoT, faltaPL, 'Sua retirada pessoal como sócio/dono', plPend)}
-    ${baldeProjRow('🔄','Reinvestimento', metaRein, '#6D3FA8','#F2EDFC','#C4ADD9', invPagoT, faltaRein, 'Tecnologia, capacitação, melhorias no negócio', invPend)}
-    ${baldeProjRow('🏦','Guardar / Reserva', metaGuar, '#185FA5','#EAF1FB','#9AB8DC', 0, faltaGuar, 'Reserva de emergência — guarde todo mês', 0)}
+    ${baldeProjRow('🔄','Reinvestimento', metaRein, '#6D3FA8','#F2EDFC','#C4ADD9', reinvPago, faltaRein, 'Tecnologia, capacitação, melhorias no negócio', reinvPend)}
+    ${baldeProjRow('🏦','Guardar / Reserva', metaGuar, '#185FA5','#EAF1FB','#9AB8DC', resPago, faltaGuar, 'Lance como investimento na categoria “Guardar / Reserva”', resPend)}
   </div>`;
 
   recs.push({
@@ -2095,8 +2122,19 @@ function renderSaude() {
   });
   else if(sInv==='amarelo') recs.push({
     t:'🔄 Reinvestimento parcial ('+Math.round(pInvFat*100)+'% vs meta 10%)',
-    s:'Você investiu '+fmt(invPagoT)+'. Para atingir a meta, ainda faltam '+fmt(Math.max(0,metaRein-invPagoT))+'. Considere reinvestir antes do fim do mês.'
+    s:'Você reinvestiu '+fmt(reinvPago)+'. Para atingir a meta, ainda faltam '+fmt(Math.max(0,metaRein-reinvPago))+'. Considere reinvestir antes do fim do mês.'
   });
+
+  if(metaGuar>0){
+    if(resPago >= metaGuar) recs.push({
+      t:'🏦 Reserva do mês atingida ('+fmt(resPago)+')',
+      s:'Você já separou '+fmt(resPago)+' para a reserva (meta: '+fmt(metaGuar)+'). Excelente disciplina — a reserva é o que protege o negócio nos meses fracos.'
+    });
+    else recs.push({
+      t:'🏦 Reserva abaixo da meta ('+fmt(resPago)+' de '+fmt(metaGuar)+')',
+      s:'Separe '+fmt(Math.max(0,metaGuar-resPago))+' para a reserva de emergência. Lance como Investimento na categoria “Guardar / Reserva” e marque como Pago para contabilizar aqui.'
+    });
+  }
 
   if(sPend==='vermelho') recs.push({
     t:'⏳ Muitos recebimentos pendentes ('+fmt(pendentes)+')',
