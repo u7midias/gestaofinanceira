@@ -71,6 +71,11 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
 .kpi-value{font-size:24px;font-weight:700;letter-spacing:-.5px;line-height:1}
 .kpi-value.g{color:var(--green)}.kpi-value.r{color:var(--red)}.kpi-value.b{color:var(--blue)}.kpi-value.p{color:var(--purple)}
 .kpi-footer{font-size:11px;color:var(--text3);margin-top:5px}
+.kpi-split{display:flex;gap:8px}
+.kpi-split .kpi-mini{flex:1;min-width:0;padding:14px 12px}
+.kpi-mini .kpi-value{font-size:18px}
+.kpi-mini .kpi-label{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-mini .kpi-footer{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
 .badge-g{background:var(--green-bg);color:var(--green)}
 .badge-r{background:var(--red-bg);color:var(--red)}
@@ -443,7 +448,10 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
       <div class="grid-4" style="margin-bottom:16px">
         <div class="kpi-card"><div class="kpi-label">Receita do mês</div><div class="kpi-value g" id="kpi-rec">—</div><div class="kpi-footer" id="kpi-rec-f"></div></div>
         <div class="kpi-card"><div class="kpi-label">Despesas do mês</div><div class="kpi-value r" id="kpi-des">—</div><div class="kpi-footer" id="kpi-des-f"></div></div>
-        <div class="kpi-card"><div class="kpi-label">Investimentos</div><div class="kpi-value p" id="kpi-inv">—</div><div class="kpi-footer" id="kpi-inv-f"></div></div>
+        <div class="kpi-split">
+          <div class="kpi-card kpi-mini"><div class="kpi-label">Reinvest.</div><div class="kpi-value p" id="kpi-inv">—</div><div class="kpi-footer" id="kpi-inv-f"></div></div>
+          <div class="kpi-card kpi-mini"><div class="kpi-label">🏦 Reserva</div><div class="kpi-value b" id="kpi-res">—</div><div class="kpi-footer" id="kpi-res-f"></div></div>
+        </div>
         <div class="kpi-card"><div class="kpi-label">Caixa atual</div><div class="kpi-value b" id="kpi-sal">—</div><div class="kpi-footer" id="kpi-sal-f">entradas − saídas pagas hoje</div></div>
       </div>
       <div class="grid-2" style="margin-bottom:16px;align-items:start">
@@ -1475,11 +1483,14 @@ function renderDashboard() {
   const desM  = lM.filter(l=>l.tipo==='despesa'&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
   const invM  = lM.filter(l=>isReinvest(l)&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
   const resM  = lM.filter(l=>isReserva(l)&&l.status==='Pago').reduce((s,l)=>s+l.valor,0);
+  // Reserva acumulada (quanto já tem guardado) até o mês selecionado
+  const resAcum = lancamentos.filter(l=>isReserva(l)&&l.status==='Pago'&&((l.ano<ano)||(l.ano===ano&&l.mes<=mes))).reduce((s,l)=>s+l.valor,0);
   const recPend = lM.filter(l=>l.tipo==='receita'&&l.status==='Pendente').reduce((s,l)=>s+l.valor,0);
 
   el('kpi-rec').textContent = fmt(recM);
   el('kpi-des').textContent = fmt(desM);
   el('kpi-inv').textContent = fmt(invM);
+  el('kpi-res').textContent = fmt(resAcum);
   const saldoDia = calcCaixa();
   el('kpi-sal').textContent = fmt(saldoDia);
   el('kpi-sal').className = 'kpi-value ' + (saldoDia >= 0 ? 'b' : 'r');
@@ -1487,7 +1498,8 @@ function renderDashboard() {
   el('kpi-sal-f').textContent = pendDes > 0 ? fmtK(pendDes)+' pendentes' : 'saldo acumulado pago';
   el('kpi-rec-f').textContent = (recPend>0 ? fmtK(recPend)+' pendente' : 'tudo recebido');
   el('kpi-des-f').textContent = lM.filter(l=>l.tipo==='despesa').length+' lançamentos';
-  el('kpi-inv-f').textContent = lM.filter(l=>isReinvest(l)).length+' investimento(s)'+(resM>0?' · 🏦 '+fmtK(resM)+' reserva':'');
+  el('kpi-inv-f').textContent = lM.filter(l=>isReinvest(l)).length+' este mês';
+  el('kpi-res-f').textContent = resM>0 ? '+'+fmtK(resM)+' em '+MESES[mes-1] : 'total guardado';
 
   // Chart anual — pagos (sólido) + pendentes (translúcido) e meses clicáveis
   const lAno = lancamentos.filter(l=>l.ano===ano);
