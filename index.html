@@ -850,6 +850,18 @@ input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--te
         <div class="form-group"><label>Descrição</label><input type="text" id="nc-desc" placeholder="Ex: Fornecedor, Cliente..."></div>
       </div>
       <div class="form-row">
+        <div class="form-group"><label>Categoria</label>
+          <select id="nc-cat">
+            <optgroup label="Despesas" id="nc-cat-despesa">
+              <option>Colaboradores</option><option>Pró-labore</option><option>Despesa Pessoal</option><option>Aluguel / Espaço</option><option>Plataformas</option><option>Marketing / Publicidade</option><option>Impostos / Taxas</option><option>Contabilidade / Juridico</option><option>Utilities (água, luz, internet)</option><option>Transporte / Logística</option><option>Plano de Saúde</option><option>Educação</option><option>Outras despesas</option>
+            </optgroup>
+            <optgroup label="Receitas" id="nc-cat-receita">
+              <option>Venda de produto</option><option>Prestação de serviço</option><option>Contrato / Mensalidade</option><option>Comissão</option><option>Consultoria</option><option>Locação / Aluguel</option><option>Outras receitas</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label>Valor (R$)</label><input type="number" id="nc-valor" placeholder="0,00" step="0.01" min="0"></div>
         <div class="form-group w-auto" style="width:70px"><label>Dia</label><input type="number" id="nc-dia" placeholder="1" min="1" max="31"></div>
         <div class="form-group"><label>Mês</label>
@@ -1036,6 +1048,8 @@ const CAT_RESERVA = 'Guardar / Reserva';
 // Helpers: reserva (guardar) vs reinvestimento (demais investimentos)
 const isReserva  = l => l.tipo==='investimento' && l.cat===CAT_RESERVA;
 const isReinvest = l => l.tipo==='investimento' && l.cat!==CAT_RESERVA;
+// Retirada pessoal (sai do operacional): pró-labore + despesa pessoal
+const isProLabore = l => l.tipo==='despesa' && (l.cat==='Pró-labore' || l.cat==='Despesa Pessoal');
 const AVATAR_BG  = ['#E8F0FE','#FEE8E8','#E8FEF0','#FEF3E2','#F0E8FE'];
 const AVATAR_COL = ['#1A5FA8','#C0392B','#2A7A4B','#A05C00','#6D3FA8'];
 const now = new Date();
@@ -1101,8 +1115,8 @@ async function dbDeleteCliente(id){
 }
 
 function lancToDb(l, uid){ return {user_id:uid,descricao:l.desc,tipo:l.tipo,valor:l.valor,dia:l.dia||null,mes:l.mes,ano:l.ano,cat:l.cat||null,status:l.status,obs:l.obs||null,recorrente:!!l.recorrente}; }
-function dbToConta(r){ return {id:r.id,tipo:r.tipo,desc:r.descricao,valor:Number(r.valor),dia:r.dia,mes:r.mes,ano:r.ano}; }
-function contaToDb(c, uid){ return {user_id:uid,descricao:c.desc,tipo:c.tipo,valor:c.valor,dia:c.dia||null,mes:c.mes,ano:c.ano}; }
+function dbToConta(r){ return {id:r.id,tipo:r.tipo,desc:r.descricao,valor:Number(r.valor),dia:r.dia,mes:r.mes,ano:r.ano,cat:r.categoria||''}; }
+function contaToDb(c, uid){ return {user_id:uid,descricao:c.desc,tipo:c.tipo,valor:c.valor,dia:c.dia||null,mes:c.mes,ano:c.ano,categoria:c.cat||null}; }
 function dbToColab(r){ return {id:r.id,nome:r.nome,func:r.func,valor:Number(r.valor),venc:r.venc||''}; }
 function colabToDb(e, uid){ return {user_id:uid,nome:e.nome,func:e.func,valor:e.valor,venc:e.venc||null}; }
 
@@ -1128,7 +1142,13 @@ async function dbDeleteLanc(id) {
 // INSERT conta
 async function dbInsertConta(c) {
   const uid = await getUserId();
-  const { data, error } = await sb.from('contas').insert(contaToDb(c, uid)).select().single();
+  const payload = contaToDb(c, uid);
+  let { data, error } = await sb.from('contas').insert(payload).select().single();
+  // Se a coluna 'categoria' ainda não existe na tabela, insere sem ela (não quebra)
+  if(error && /categoria|column/i.test(error.message||'')){
+    const { categoria, ...semCat } = payload;
+    ({ data, error } = await sb.from('contas').insert(semCat).select().single());
+  }
   if(error){ toast('Erro ao salvar conta: '+error.message,true); return null; }
   return data.id;
 }
@@ -1249,6 +1269,13 @@ function setNCTipo(t) {
   ncTipo = t;
   el('nc-pag').classList.toggle('active', t==='pagar');
   el('nc-rec').classList.toggle('active', t==='receber');
+  const gD=el('nc-cat-despesa'), gR=el('nc-cat-receita');
+  if(gD&&gR){
+    gD.style.display = t==='pagar'   ? '' : 'none';
+    gR.style.display = t==='receber' ? '' : 'none';
+    const firstOpt = (t==='pagar'?gD:gR).querySelector('option');
+    if(firstOpt) el('nc-cat').value = firstOpt.value;
+  }
 }
 function abrirModalConta() {
   ncTipo = 'pagar';
@@ -1415,20 +1442,21 @@ async function salvarConta() {
   const dia=parseInt(diaEl?diaEl.value:1)||1, mes=parseInt(mesEl?mesEl.value:CUR_MES)||CUR_MES, ano=parseInt(anoEl?anoEl.value:CUR_ANO)||CUR_ANO;
   if(!desc||!valor||valor<=0){toast('Preencha descrição e valor',true);return;}
   if(!ncTipo){toast('Selecione o tipo da conta',true);return;}
-  const obj={tipo:ncTipo,desc,valor,dia,mes,ano};
+  const cat=(el('nc-cat')&&el('nc-cat').value)||'';
+  const obj={tipo:ncTipo,desc,valor,dia,mes,ano,cat};
   const newId=await dbInsertConta(obj);
   if(newId){obj.id=newId;contas.push(obj);closeModal('modal-conta');['nc-desc','nc-valor','nc-dia'].forEach(id=>{const e=el(id);if(e)e.value='';});toast('Conta salva ✓');renderAll();}
 }
 async function pagarConta(id) {
   const c=contas.find(x=>x.id===id); if(!c) return;
-  const lanc={tipo:'despesa',desc:c.desc,valor:c.valor,dia:c.dia,mes:c.mes,ano:c.ano,cat:'Outros',status:'Pago',obs:'Da conta',recorrente:false};
+  const lanc={tipo:'despesa',desc:c.desc,valor:c.valor,dia:c.dia,mes:c.mes,ano:c.ano,cat:c.cat||'Outras despesas',status:'Pago',obs:'Da conta',recorrente:false};
   const newId=await dbInsertLanc(lanc); if(newId){lanc.id=newId;lancamentos.push(lanc);}
   await dbDeleteConta(id); contas=contas.filter(x=>x.id!==id);
   toast('Pago e lançado ✓'); renderAll();
 }
 async function receberConta(id) {
   const c=contas.find(x=>x.id===id); if(!c) return;
-  const lanc={tipo:'receita',desc:c.desc,valor:c.valor,dia:c.dia,mes:c.mes,ano:c.ano,cat:'Contrato mensal',status:'Pago',obs:'Da conta',recorrente:false};
+  const lanc={tipo:'receita',desc:c.desc,valor:c.valor,dia:c.dia,mes:c.mes,ano:c.ano,cat:c.cat||'Outras receitas',status:'Pago',obs:'Da conta',recorrente:false};
   const newId=await dbInsertLanc(lanc); if(newId){lanc.id=newId;lancamentos.push(lanc);}
   await dbDeleteConta(id); contas=contas.filter(x=>x.id!==id);
   toast('Recebido e lançado ✓'); renderAll();
@@ -1698,7 +1726,7 @@ function renderContas() {
     const action=isPagar
       ?'<button class="btn btn-ghost btn-sm" onclick="pagarConta(\''+c.id+'\')" style="font-size:11px;color:var(--green)">Pagar</button>'
       :'<button class="btn btn-ghost btn-sm" onclick="receberConta(\''+c.id+'\')" style="font-size:11px;color:var(--green)">Receber</button>';
-    return '<tr><td><div class="td-bold">'+c.desc+'</div><span class="badge '+(vencido?'badge-r':'badge-a')+'">'+(vencido?'Vencido':'Pendente')+'</span></td>'
+    return '<tr><td><div class="td-bold">'+c.desc+'</div><span class="badge '+(vencido?'badge-r':'badge-a')+'">'+(vencido?'Vencido':'Pendente')+'</span>'+(c.cat?' <span class="badge badge-n" style="font-size:10px">'+c.cat+'</span>':'')+'</td>'
       +'<td class="td-muted" style="font-size:12px">'+fmtData(c.dia,c.mes,c.ano)+'</td>'
       +'<td class="td-num '+(isPagar?'td-red':'td-green')+'">'+fmt(c.valor)+'</td>'
       +'<td style="text-align:right;white-space:nowrap">'+action+'<button class="btn btn-ghost btn-icon btn-sm" onclick="delConta(\''+c.id+'\')" style="font-size:12px;margin-left:4px">✕</button></td></tr>';
@@ -1851,7 +1879,7 @@ function renderSaude() {
   const modoProjecao = isMesFuturo || temPendentes;
 
   const recTotal = lMes.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
-  const plTotal  = lMes.filter(l=>l.tipo==='despesa'&&l.cat==='Pró-labore').reduce((s,l)=>s+l.valor,0);
+  const plTotal  = lMes.filter(isProLabore).reduce((s,l)=>s+l.valor,0);
   const desTotal = lMes.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
   const desOp    = desTotal - plTotal;
   const invTotal = lMes.filter(l=>l.tipo==='investimento').reduce((s,l)=>s+l.valor,0);
@@ -1870,7 +1898,7 @@ function renderSaude() {
 
   // ── Valores REALIZADOS (apenas status Pago) — usados para "meta batida" e semáforo ──
   const desPagoT   = lMesPagos.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
-  const plPagoT    = lMesPagos.filter(l=>l.tipo==='despesa'&&l.cat==='Pró-labore').reduce((s,l)=>s+l.valor,0);
+  const plPagoT    = lMesPagos.filter(isProLabore).reduce((s,l)=>s+l.valor,0);
   const desOpPago  = desPagoT - plPagoT;
   const invPagoT   = lMesPagos.filter(l=>l.tipo==='investimento').reduce((s,l)=>s+l.valor,0);
   const resPago    = lMesPagos.filter(l=>l.tipo==='investimento'&&l.cat===CAT_RESERVA).reduce((s,l)=>s+l.valor,0);
@@ -2097,7 +2125,7 @@ function renderSaude() {
       <div style="font-size:10px;color:var(--text3);margin-top:4px">${modoProjecao?'Baseado nos lançamentos pendentes — o cenário se confirma à medida que você marca como Pago.':'A distribuição considera o faturamento completo do mês: pago + a receber.'}</div>
     </div>
     ${baldeProjRow('🏢','Custo Operacional', metaOp, '#2A7A4B','#EAF4EE','#A7D7B8', desOpPago, faltaOp, 'Todas as despesas do negócio exceto pró-labore', desOpPend)}
-    ${baldeProjRow('💼','Pró-labore', metaPL, '#A05C00','#FDF4E7','#F5C97A', plPagoT, faltaPL, 'Sua retirada pessoal como sócio/dono', plPend)}
+    ${baldeProjRow('💼','Pró-labore', metaPL, '#A05C00','#FDF4E7','#F5C97A', plPagoT, faltaPL, 'Sua retirada + despesas pessoais (sócio/dono)', plPend)}
     ${baldeProjRow('🔄','Reinvestimento', metaRein, '#6D3FA8','#F2EDFC','#C4ADD9', reinvPago, faltaRein, 'Tecnologia, capacitação, melhorias no negócio', reinvPend)}
     ${baldeProjRow('🏦','Guardar / Reserva', metaGuar, '#185FA5','#EAF1FB','#9AB8DC', resPago, faltaGuar, 'Lance como investimento na categoria “Guardar / Reserva”', resPend)}
   </div>`;
