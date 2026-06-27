@@ -1265,6 +1265,17 @@ function setNLTipo(t) {
   if(t==='investimento'){ el('nl-recorrente').checked=false; toggleRecFields(); }
   el('nl-cat').value = '';
 }
+function abrirModalInvestimento(cat) {
+  // Reseta o modal e abre já na aba Investimento com a categoria pré-selecionada
+  resetModalNovo();
+  setNLTipo('investimento');
+  if(cat) el('nl-cat').value = cat;
+  // Pré-preenche mês/ano com o mês selecionado na saúde financeira
+  const sauMes = el('saude-mes'); const sauAno = el('saude-ano');
+  if(sauMes) el('nl-mes').value = sauMes.value;
+  if(sauAno) el('nl-ano').value = sauAno.value;
+  openModal('modal-novo');
+}
 function setNCTipo(t) {
   ncTipo = t;
   el('nc-pag').classList.toggle('active', t==='pagar');
@@ -2080,11 +2091,14 @@ function renderSaude() {
   const faltaRein = Math.max(0, metaRein - reinvPago);
   const faltaGuar = Math.max(0, metaGuar - resPago);
 
-  function baldeProjRow(icone, label, meta, cor, bg, borda, realizado, falta, nota, pendente) {
+  function baldeProjRow(icone, label, meta, cor, bg, borda, realizado, falta, nota, pendente, catAtalho) {
     const pct = fatTotal > 0 ? Math.round(realizado / fatTotal * 100) : 0;
     const pctMeta = fatTotal > 0 ? Math.round(meta / fatTotal * 100) : 0;
     const barW = Math.min(realizado / Math.max(meta, 0.01) * 100, 100);
     const barPendW = Math.min((realizado + (pendente||0)) / Math.max(meta, 0.01) * 100, 100);
+    const btnAtalho = catAtalho && falta > 0
+      ? `<button onclick="abrirModalInvestimento('${catAtalho}')" style="margin-top:8px;width:100%;font-size:10px;font-weight:700;padding:5px 10px;border-radius:var(--r-sm);border:1.5px solid ${cor};background:transparent;color:${cor};cursor:pointer;letter-spacing:.02em">+ Lançar ${label.split('/')[0].trim()}</button>`
+      : '';
     return `
     <div style="background:${bg};border:1.5px solid ${borda};border-radius:var(--r-md);padding:14px 16px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
@@ -2103,6 +2117,7 @@ function renderSaude() {
             <span>Pago: <strong style="color:${cor}">${fmt(realizado)}</strong> (${pct}%)${(pendente||0) > 0 ? ` · <span style="color:var(--amber)">⏳ ${fmt(pendente)} pendente</span>` : ''}</span>
             ${falta > 0 ? `<span style="color:var(--amber);font-weight:600">falta pagar ${fmt(falta)}</span>` : `<span style="color:#2A7A4B;font-weight:600">✓ atingido (pago)</span>`}
           </div>
+          ${btnAtalho}
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Sugestão</div>
@@ -2124,10 +2139,10 @@ function renderSaude() {
       </div>
       <div style="font-size:10px;color:var(--text3);margin-top:4px">${modoProjecao?'Baseado nos lançamentos pendentes — o cenário se confirma à medida que você marca como Pago.':'A distribuição considera o faturamento completo do mês: pago + a receber.'}</div>
     </div>
-    ${baldeProjRow('🏢','Custo Operacional', metaOp, '#2A7A4B','#EAF4EE','#A7D7B8', desOpPago, faltaOp, 'Todas as despesas do negócio exceto pró-labore', desOpPend)}
-    ${baldeProjRow('💼','Pró-labore', metaPL, '#A05C00','#FDF4E7','#F5C97A', plPagoT, faltaPL, 'Sua retirada + despesas pessoais (sócio/dono)', plPend)}
-    ${baldeProjRow('🔄','Reinvestimento', metaRein, '#6D3FA8','#F2EDFC','#C4ADD9', reinvPago, faltaRein, 'Tecnologia, capacitação, melhorias no negócio', reinvPend)}
-    ${baldeProjRow('🏦','Guardar / Reserva', metaGuar, '#185FA5','#EAF1FB','#9AB8DC', resPago, faltaGuar, 'Lance como investimento na categoria “Guardar / Reserva”', resPend)}
+    ${baldeProjRow('🏢','Custo Operacional', metaOp, '#2A7A4B','#EAF4EE','#A7D7B8', desOpPago, faltaOp, 'Todas as despesas do negócio exceto pró-labore', desOpPend, null)}
+    ${baldeProjRow('💼','Pró-labore', metaPL, '#A05C00','#FDF4E7','#F5C97A', plPagoT, faltaPL, 'Sua retirada + despesas pessoais (sócio/dono)', plPend, null)}
+    ${baldeProjRow('🔄','Reinvestimento', metaRein, '#6D3FA8','#F2EDFC','#C4ADD9', reinvPago, faltaRein, 'Tecnologia, capacitação, melhorias no negócio', reinvPend, 'Outros investimentos')}
+    ${baldeProjRow('🏦','Guardar / Reserva', metaGuar, '#185FA5','#EAF1FB','#9AB8DC', resPago, faltaGuar, 'Lance como investimento na categoria "Guardar / Reserva"', resPend, 'Guardar / Reserva')}
   </div>`;
 
   recs.push({
