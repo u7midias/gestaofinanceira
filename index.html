@@ -1266,14 +1266,15 @@ function setNLTipo(t) {
   el('nl-cat').value = '';
 }
 function abrirModalInvestimento(cat) {
-  // Reseta o modal e abre já na aba Investimento com a categoria pré-selecionada
   resetModalNovo();
   setNLTipo('investimento');
   if(cat) el('nl-cat').value = cat;
-  // Pré-preenche mês/ano com o mês selecionado na saúde financeira
   const sauMes = el('saude-mes'); const sauAno = el('saude-ano');
   if(sauMes) el('nl-mes').value = sauMes.value;
   if(sauAno) el('nl-ano').value = sauAno.value;
+  // Sempre abre como Pendente — usuário marca Pago quando efetivamente pagar
+  const statusEl = el('nl-status');
+  if(statusEl) statusEl.value = 'Pendente';
   openModal('modal-novo');
 }
 function setNCTipo(t) {
@@ -2085,18 +2086,11 @@ function renderSaude() {
   // ── Recomendações baseadas no modelo 50/30/10/10 ──────────────────────
   const recs = [];
 
-  // Pendentes só entram no "realizado" quando há algo pago no mês (mês em andamento).
-  // Mês futuro sem nada pago: pendentes ficam só na barra translúcida (previsão).
-  const mesEmAndamento = modoProjecao && temRealizado;
-  const opProj    = mesEmAndamento ? desOpPago + desOpPend  : desOpPago;
-  const plProj    = mesEmAndamento ? plPagoT   + plPend     : plPagoT;
-  const reinvProj2= mesEmAndamento ? reinvPago + reinvPend  : reinvPago;
-  const resProj   = mesEmAndamento ? resPago   + resPend    : resPago;
-
-  const faltaOp   = Math.max(0, metaOp   - opProj);
-  const faltaPL   = Math.max(0, metaPL   - plProj);
-  const faltaRein = Math.max(0, metaRein - reinvProj2);
-  const faltaGuar = Math.max(0, metaGuar - resProj);
+  // "falta" considera apenas pagos; pendentes aparecem na barra translúcida
+  const faltaOp   = Math.max(0, metaOp   - desOpPago);
+  const faltaPL   = Math.max(0, metaPL   - plPagoT);
+  const faltaRein = Math.max(0, metaRein - reinvPago);
+  const faltaGuar = Math.max(0, metaGuar - resPago);
 
   function baldeProjRow(icone, label, meta, cor, bg, borda, realizado, falta, nota, pendente, catAtalho) {
     const pct = fatTotal > 0 ? Math.round(realizado / fatTotal * 100) : 0;
@@ -2146,10 +2140,10 @@ function renderSaude() {
       </div>
       <div style="font-size:10px;color:var(--text3);margin-top:4px">${modoProjecao?'Baseado nos lançamentos pendentes — o cenário se confirma à medida que você marca como Pago.':'A distribuição considera o faturamento completo do mês: pago + a receber.'}</div>
     </div>
-    ${baldeProjRow('🏢','Custo Operacional', metaOp, '#2A7A4B','#EAF4EE','#A7D7B8', opProj, faltaOp, 'Todas as despesas do negócio exceto pró-labore', mesEmAndamento?0:desOpPend, null)}
-    ${baldeProjRow('💼','Pró-labore', metaPL, '#A05C00','#FDF4E7','#F5C97A', plProj, faltaPL, 'Sua retirada + despesas pessoais (sócio/dono)', mesEmAndamento?0:plPend, null)}
-    ${baldeProjRow('🔄','Reinvestimento', metaRein, '#6D3FA8','#F2EDFC','#C4ADD9', reinvProj2, faltaRein, 'Tecnologia, capacitação, melhorias no negócio', mesEmAndamento?0:reinvPend, 'Outros investimentos')}
-    ${baldeProjRow('🏦','Guardar / Reserva', metaGuar, '#185FA5','#EAF1FB','#9AB8DC', resProj, faltaGuar, 'Lance como investimento na categoria "Guardar / Reserva"', mesEmAndamento?0:resPend, 'Guardar / Reserva')}
+    ${baldeProjRow('🏢','Custo Operacional', metaOp, '#2A7A4B','#EAF4EE','#A7D7B8', desOpPago, faltaOp, 'Todas as despesas do negócio exceto pró-labore', desOpPend, null)}
+    ${baldeProjRow('💼','Pró-labore', metaPL, '#A05C00','#FDF4E7','#F5C97A', plPagoT, faltaPL, 'Sua retirada + despesas pessoais (sócio/dono)', plPend, null)}
+    ${baldeProjRow('🔄','Reinvestimento', metaRein, '#6D3FA8','#F2EDFC','#C4ADD9', reinvPago, faltaRein, 'Tecnologia, capacitação, melhorias no negócio', reinvPend, 'Outros investimentos')}
+    ${baldeProjRow('🏦','Guardar / Reserva', metaGuar, '#185FA5','#EAF1FB','#9AB8DC', resPago, faltaGuar, 'Lance como investimento na categoria "Guardar / Reserva"', resPend, 'Guardar / Reserva')}
   </div>`;
 
   recs.push({
